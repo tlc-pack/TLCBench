@@ -1,3 +1,3 @@
-# TLC-Bench
+# TLCBench
 
 Benchmark scripts for TVM
