@@ -53,16 +53,17 @@ def autotvm_tune(network, target, input_name, kernel_log, graph_log):
             params=params, ops=(relay.op.get("nn.conv2d"),)
     )
 
-    tuning_opt = autotvm_tuning_opt(target, network, kernel_log)
+#    tuning_opt = autotvm_tuning_opt(target, network, kernel_log)
+    tuning_opt = autotvm_tuning_opt(target, network, graph_log)
     tune_kernels(tasks, **tuning_opt)
-    tune_graph(mod["main"], input_shape,
-               kernel_log, graph_log,
-               target, input_name)
+#    tune_graph(mod["main"], input_shape,
+#               kernel_log, graph_log,
+#               target, input_name)
 
 def autotvm_tuning_opt(target, network, log_file, dtype = "float32"):
     tuning_option = {
         "log_filename": log_file,
-        "tuner": "xgb",
+        "tuner": "random",
         "n_trial": 1,
         "early_stopping": 1,
         "measure_option": autotvm.measure_option(
@@ -81,11 +82,13 @@ def tune_kernels(
     log_filename="tuning.log",
     use_transfer_learning=True,
 ):
+    print("I am in tune kernels")
     for i, tsk in enumerate(reversed(tasks)):
         prefix = "[Task %2d/%2d] " % (i + 1, len(tasks))
 
         # create tuner
         if tuner == "xgb" or tuner == "xgb-rank":
+            print("Try to create xgb tuner")
             tuner_obj = XGBTuner(tsk, loss_type="rank")
         elif tuner == "ga":
             tuner_obj = GATuner(tsk, pop_size=100)
@@ -96,6 +99,7 @@ def tune_kernels(
         else:
             raise ValueError("Invalid tuner: " + tuner)
 
+        print("Finish xgb object")
         # do tuning
         tsk_trial = min(n_trial, len(tsk.config_space))
         tuner_obj.tune(
