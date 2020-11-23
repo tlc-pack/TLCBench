@@ -12,11 +12,11 @@ from util import get_network, autotvm_tune
 
 
 
-def benchmark(network, target, input_name):
-    net, params, input_shape, output_shape = get_network(network, batch_size=1)
+def benchmark(network, target, input_name, kernel_log, graph_log):
+    mod, params, input_shape, output_shape = get_network(network, batch_size=1)
 
     with tvm.transform.PassContext(opt_level=3):
-        lib = relay.build(net, target=target, params=params)
+        lib = relay.build(mod, target=target, params=params)
 
     # Tune
     print("Tune...")
@@ -47,16 +47,8 @@ if __name__ == "__main__":
         "--network",
         type=str,
         choices=[
-            "resnet-18",
-            "resnet-34",
             "resnet-50",
-            "vgg-16",
-            "vgg-19",
-            "densenet-121",
-            "inception_v3",
             "mobilenet",
-            "squeezenet_v1.0",
-            "squeezenet_v1.1",
         ],
         help="The name of neural network",
     )
@@ -91,23 +83,26 @@ if __name__ == "__main__":
     input_name = "data"
 
     if args.network is None:
-        networks = ["resnet-50", "mobilenet""]
+        networks = ["resnet-50", "mobilenet"]
     else:
         networks = [args.network]
 
-    target = tvm.target.Target("%s -device=%s -model=%s" % (args.target, args.device, args.model))
+    #target = tvm.target.Target("%s -device=%s -model=%s" % (args.target, args.device, args.model))
+    target = tvm.target.cuda()
 
     print("--------------------------------------------------")
     print("%-20s %-20s" % ("Network Name", "Mean Inference Time (std dev)"))
     print("--------------------------------------------------")
     for network in networks:
+        kernel_log = "%s_kernel.log" % network
+        graph_log = "%s_graph.log" % network
         if args.thread == 1:
-            benchmark(network, target, input_name)
+            benchmark(network, target, input_name, kernel_log, graph_log)
         else:
             threads = list()
             for n in range(args.thread):
                 thread = threading.Thread(
-                    target=benchmark, args=([network, target, input_name]), name="thread%d" % n
+                    target=benchmark, args=([network, target, input_name, kernel_log, graph_log]), name="thread%d" % n
                 )
                 threads.append(thread)
 
