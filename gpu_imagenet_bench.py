@@ -12,7 +12,7 @@ from util import get_network, autotvm_tune
 
 
 
-def benchmark(network, target, input_name, kernel_log, graph_log):
+def benchmark(network, target, input_name, kernel_log, graph_log, tune=True, method="ansor"):
     mod, params, input_shape, output_shape = get_network(network, batch_size=1)
 
     with tvm.transform.PassContext(opt_level=3):
@@ -20,12 +20,28 @@ def benchmark(network, target, input_name, kernel_log, graph_log):
 
     # Tune
     print("Tune...")
-    autotvm_tune(network, target, input_name, kernel_log, graph_log)
-    with  autotvm.apply_history_best(graph_log):
-        print("Compile...")
-        with tvm.transform.PassContext(opt_level=3):
-            lib = relay.build_module.build(mod, target=target, params=params)
+    if not tune and not os.path.exists(graph_log):
+        # TODO
+        raise IOError("Pre-tuned file unaccessable")
+
+    if tune and os.path.exists(graph_log):
+        os.remove(graph_log)
     
+    if method == "autotvm":
+        autotvm_tune(network, target, input_name, kernel_log, graph_log)
+        print("Compile...")
+        with  autotvm.apply_history_best(graph_log):
+            with tvm.transform.PassContext(opt_level=3):
+                lib = relay.build_module.build(mod, target=target, params=params)
+    elif method == "ansor":
+        auto_scheduler_tune(network, target, input_name, kernel_log, graph_log)
+        print("Compile...")
+        with auto_scheduler.ApplyHistoryBest(graph_log):
+            with tvm.transform.PassContext(opt_level=3, config={"relay.backend.use_auto_scheduler": True}):
+                lib = relay.build(mod, target=target, params=params)
+    else:
+        raise ValueError("Unsupported tuning method")
+
     # create runtime
     ctx = tvm.context(str(target), 0)
     module = runtime.GraphModule(lib["default"](ctx))
