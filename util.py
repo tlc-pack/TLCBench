@@ -126,17 +126,18 @@ def tune_graph(graph, dshape, records, opt_sch_file, target, input_name, use_DP=
 
 ############################################ Tuning for Auto Schedule *********************************
 def auto_scheduler_tune(network, target, input_name, kernel_log, graph_log):
-    # mod, net_params, input_shape, output_shape = get_network(network)
-    # tasks, task_weights = auto_scheduler.extract_tasks(mod["main"], net_params, params["target"])
-    # # sch, args = auto_scheduler.auto_schedule(task, tuning_options=tune_option)
+    mod, net_params, input_shape, output_shape = get_network(network)
+    tasks, task_weights = auto_scheduler.extract_tasks(mod["main"], net_params, target)
+    # sch, args = auto_scheduler.auto_schedule(task, tuning_options=tune_option)
 
+    measure_ctx = auto_scheduler.LocalRPCMeasureContext(repeat=1, min_repeat_ms=400, timeout=10)
     # print("====================================")
-    # tuner = auto_scheduler.TaskScheduler(tasks, task_weights)
+    tuner = auto_scheduler.TaskScheduler(tasks, task_weights)
 
-    # tune_option = auto_scheduler.TuningOptions(
-    #     num_measure_trials=10,
-    #     measure_callbacks=[auto_scheduler.RecordToFile(params["graph_log"])],
-    #     verbose=2,
-    # )
-    # tuner.tune(tune_option)
-    pass
+    tune_option = auto_scheduler.TuningOptions(
+        num_measure_trials=100,
+        measure_callbacks=[auto_scheduler.RecordToFile(graph_log)],
+        runner=measure_ctx.runner,
+        verbose=2,
+    )
+    tuner.tune(tune_option)

@@ -1,3 +1,4 @@
+import os
 import argparse
 import threading
 
@@ -8,7 +9,7 @@ from tvm import te, autotvm
 import tvm.contrib.graph_runtime as runtime
 from tvm import relay
 
-from util import get_network, autotvm_tune
+from util import get_network, autotvm_tune, auto_scheduler_tune
 
 
 
