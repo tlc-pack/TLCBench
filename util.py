@@ -124,7 +124,7 @@ def auto_scheduler_tuning_opt(network, target, log_file, dtype = "float32"):
     measure_ctx = auto_scheduler.LocalRPCMeasureContext(repeat=1, min_repeat_ms=400, timeout=10)
     return auto_scheduler.TuningOptions(
         num_measure_trials=200,
-        measure_callbacks=[auto_scheduler.RecordToFile(graph_log)],
+        measure_callbacks=[auto_scheduler.RecordToFile(log_file)],
         runner=measure_ctx.runner,
         verbose=2,
     )

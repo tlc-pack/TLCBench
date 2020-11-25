@@ -12,7 +12,6 @@ import tvm.contrib.graph_runtime as runtime
 from util import autotvm_tune, auto_scheduler_tune, get_network
 
 def tune(network, target, log_file):
-    print("---------------")
     if args.tunemethod == "autotvm":
         lib = autotvm_tune(network, target, args.inputname, log_file)
     elif args.tunemethod == "autoscheduler":
@@ -27,7 +26,7 @@ def benchmark(network, target, log_file):
         tune(network, target, log_file)
 
     print("Compile...")
-    if method == "autotvm":
+    if args.tunemethod == "autotvm":
         with autotvm.apply_graph_best(tune_graph_log):
             with tvm.transform.PassContext(opt_level=3):
                 lib = relay.build_module.build(mod, target=target, params=net_params)  

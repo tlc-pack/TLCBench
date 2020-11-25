@@ -11,8 +11,6 @@ from tvm import relay
 
 from util import get_network, autotvm_tune, auto_scheduler_tune
 
-
-
 def benchmark(network, target, log_file):
     mod, params, input_shape, output_shape = get_network(network, batch_size=1)
     if args.tune:
@@ -117,7 +115,7 @@ if __name__ == "__main__":
     for network in networks:
         log_file = os.path.join(args.logdir, network + ".log")
         if args.thread == 1:
-            benchmark(network, target, inputname, log_file)
+            benchmark(network, target, log_file)
         else:
             threads = list()
             for n in range(args.thread):
