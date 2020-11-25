@@ -21,7 +21,7 @@ def tune(network, target, log_file):
 
 def benchmark(network, target, log_file):
     mod, params, input_shape, output_shape = get_network(network)
-    if (args.tune):
+    if not args.notune:
         print("Tuning...")
         tune(network, target, log_file)
 
@@ -29,7 +29,7 @@ def benchmark(network, target, log_file):
     if args.tunemethod == "autotvm":
         with autotvm.apply_graph_best(log_file):
             with tvm.transform.PassContext(opt_level=3):
-                lib = relay.build_module.build(mod, target="llvm", params=params)  
+                lib = relay.build_module.build(mod, target=target, params=params)  
     else:
         raise ValueError("Unsupported scheduler for compiling: " + name)   
 
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     parser.add_argument("--repeat", type=int, default=600)
     parser.add_argument("--thread", type=int, default=1, help="The number of threads to be run.")
     parser.add_argument("--logdir", type=str, default="log/", help="Log file directory.")
-    parser.add_argument("--tune", type=bool, default=True, help="Enable tuning.")
+    parser.add_argument("--notune", nargs='?', const=True, default=False, help="Disable tuning.")
     parser.add_argument(
         "--tunemethod", 
         type=str,

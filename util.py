@@ -54,11 +54,12 @@ def autotvm_tune(network, target, input_name, log_file):
     )
 
 #    tuning_opt = autotvm_tuning_opt(target, network, kernel_log)
-    tuning_opt = autotvm_tuning_opt(target, network, log_file)
+    tmp_log = "tmp.log"
+    tuning_opt = autotvm_tuning_opt(target, network, tmp_log)
     tune_kernels(tasks, **tuning_opt)
-#    tune_graph(mod["main"], input_shape,
-#               kernel_log, graph_log,
-#               target, input_name)
+    tune_graph(mod["main"], input_shape, tmp_log,
+              log_file, target, input_name)
+    os.remove(tmp_log)
 
 def autotvm_tuning_opt(target, network, log_file, dtype = "float32"):
     tuning_option = {
