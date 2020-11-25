@@ -20,16 +20,16 @@ def tune(network, target, log_file):
         raise ValueError("Unsupported scheduler: " + name)
 
 def benchmark(network, target, log_file):
-    mod, net_params, input_shape, output_shape = get_network(network)
+    mod, params, input_shape, output_shape = get_network(network)
     if (args.tune):
         print("Tuning...")
         tune(network, target, log_file)
 
     print("Compile...")
     if args.tunemethod == "autotvm":
-        with autotvm.apply_graph_best(tune_graph_log):
+        with autotvm.apply_graph_best(log_file):
             with tvm.transform.PassContext(opt_level=3):
-                lib = relay.build_module.build(mod, target=target, params=net_params)  
+                lib = relay.build_module.build(mod, target="llvm", params=params)  
     else:
         raise ValueError("Unsupported scheduler for compiling: " + name)   
 
