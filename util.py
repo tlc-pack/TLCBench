@@ -52,14 +52,19 @@ def autotvm_tune(network, target, input_name, log_file):
             mod["main"], target=target,
             params=params, ops=(relay.op.get("nn.conv2d"),)
     )
+    if os.path.exists(log_file):
+        os.remove(log_file)
 
-#    tuning_opt = autotvm_tuning_opt(target, network, kernel_log)
-    tmp_log = "tmp.log"
-    tuning_opt = autotvm_tuning_opt(target, network, tmp_log)
-    tune_kernels(tasks, **tuning_opt)
-    tune_graph(mod["main"], input_shape, tmp_log,
-              log_file, target, input_name)
-    os.remove(tmp_log)
+    if target.keys[0] == "cpu":
+        tmp_log = "tmp.log"
+        tuning_opt = autotvm_tuning_opt(target, network, tmp_log)
+        tune_kernels(tasks, **tuning_opt)
+        tune_graph(mod["main"], input_shape, tmp_log,
+                log_file, target, input_name)
+        os.remove(tmp_log)
+    else:
+        tuning_opt = autotvm_tuning_opt(target, network, log_file)
+        tune_kernels(tasks, **tuning_opt)
 
 def autotvm_tuning_opt(target, network, log_file, dtype = "float32"):
     tuning_option = {
@@ -78,7 +83,7 @@ def tune_kernels(
     tasks,
     measure_option,
     tuner="xgb",
-    n_trial=200,
+    n_trial=1000,
     early_stopping=None,
     log_filename="tuning.log"
 ):
@@ -131,6 +136,8 @@ def auto_scheduler_tuning_opt(network, target, log_file, dtype = "float32"):
     )
 
 def auto_scheduler_tune(network, target, input_name, log_file):
+    if os.path.exists(log_file):
+        os.remove(log_file)
     mod, net_params, input_shape, output_shape = get_network(network)
     tasks, task_weights = auto_scheduler.extract_tasks(mod["main"], net_params, target)
     tuner = auto_scheduler.TaskScheduler(tasks, task_weights)

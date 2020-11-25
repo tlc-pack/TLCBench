@@ -13,7 +13,7 @@ from util import get_network, autotvm_tune, auto_scheduler_tune
 
 def benchmark(network, target, log_file):
     mod, params, input_shape, output_shape = get_network(network, batch_size=1)
-    if args.tune:
+    if not args.notune:
         print("Tune...")
         if args.tunemethod == "autotvm":
             autotvm_tune(network, target, args.inputname, log_file)
@@ -87,7 +87,7 @@ if __name__ == "__main__":
     parser.add_argument("--repeat", type=int, default=600)
     parser.add_argument("--thread", type=int, default=1, help="The number of threads to be run.")
     parser.add_argument("--logdir", type=str, default="log/", help="Log file directory.")
-    parser.add_argument("--tune", type=bool, default=True, help="Enable tuning.")
+    parser.add_argument("--notune", type=bool, const=True, default=False, help="Disable tuning.")
     parser.add_argument(
         "--tunemethod", 
         type=str,
