@@ -46,7 +46,7 @@ def get_network(name, batch_size=1, dtype="float32"):
     return mod, params, input_shape, output_shape
 
 ############################################ Tuning for AutoTVM *********************************
-def autotvm_tune(network, target, input_name, kernel_log, graph_log):
+def autotvm_tune(network, target, input_name, log_file):
     mod, params, input_shape, output_shape = get_network(network)
     tasks = autotvm.task.extract_from_program(
             mod["main"], target=target,
@@ -54,7 +54,7 @@ def autotvm_tune(network, target, input_name, kernel_log, graph_log):
     )
 
 #    tuning_opt = autotvm_tuning_opt(target, network, kernel_log)
-    tuning_opt = autotvm_tuning_opt(target, network, graph_log)
+    tuning_opt = autotvm_tuning_opt(target, network, log_file)
     tune_kernels(tasks, **tuning_opt)
 #    tune_graph(mod["main"], input_shape,
 #               kernel_log, graph_log,
@@ -77,18 +77,14 @@ def tune_kernels(
     tasks,
     measure_option,
     tuner="xgb",
-    n_trial=1000,
+    n_trial=200,
     early_stopping=None,
-    log_filename="tuning.log",
-    use_transfer_learning=True,
+    log_filename="tuning.log"
 ):
-    print("I am in tune kernels")
     for i, tsk in enumerate(reversed(tasks)):
         prefix = "[Task %2d/%2d] " % (i + 1, len(tasks))
-
         # create tuner
         if tuner == "xgb" or tuner == "xgb-rank":
-            print("Try to create xgb tuner")
             tuner_obj = XGBTuner(tsk, loss_type="rank")
         elif tuner == "ga":
             tuner_obj = GATuner(tsk, pop_size=100)
@@ -99,7 +95,6 @@ def tune_kernels(
         else:
             raise ValueError("Invalid tuner: " + tuner)
 
-        print("Finish xgb object")
         # do tuning
         tsk_trial = min(n_trial, len(tsk.config_space))
         tuner_obj.tune(
@@ -125,19 +120,17 @@ def tune_graph(graph, dshape, records, opt_sch_file, target, input_name, use_DP=
     executor.write_opt_sch2record_file(opt_sch_file)
 
 ############################################ Tuning for Auto Schedule *********************************
-def auto_scheduler_tune(network, target, input_name, kernel_log, graph_log):
-    mod, net_params, input_shape, output_shape = get_network(network)
-    tasks, task_weights = auto_scheduler.extract_tasks(mod["main"], net_params, target)
-    # sch, args = auto_scheduler.auto_schedule(task, tuning_options=tune_option)
-
+def auto_scheduler_tuning_opt(network, target, log_file, dtype = "float32"):
     measure_ctx = auto_scheduler.LocalRPCMeasureContext(repeat=1, min_repeat_ms=400, timeout=10)
-    # print("====================================")
-    tuner = auto_scheduler.TaskScheduler(tasks, task_weights)
-
-    tune_option = auto_scheduler.TuningOptions(
-        num_measure_trials=100,
+    return auto_scheduler.TuningOptions(
+        num_measure_trials=200,
         measure_callbacks=[auto_scheduler.RecordToFile(graph_log)],
         runner=measure_ctx.runner,
         verbose=2,
     )
-    tuner.tune(tune_option)
+
+def auto_scheduler_tune(network, target, input_name, log_file):
+    mod, net_params, input_shape, output_shape = get_network(network)
+    tasks, task_weights = auto_scheduler.extract_tasks(mod["main"], net_params, target)
+    tuner = auto_scheduler.TaskScheduler(tasks, task_weights)
+    tuner.tune(auto_scheduler_tuning_opt(network, target, log_file))

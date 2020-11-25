@@ -11,36 +11,33 @@ import tvm.contrib.graph_runtime as runtime
 
 from util import autotvm_tune, auto_scheduler_tune, get_network
 
-def tune(network, target, input_name, tune_kernel_log, tune_graph_log, method):
-    if method == "autotvm":
-        lib = autotvm_tune(network, target, input_name, tune_kernel_log, tune_graph_log)
-    elif method == "ansor":
-        lib = auto_scheduler_tune(network, target, input_name, tune_kernel_log, tune_graph_log)
+def tune(network, target, log_file):
+    if args.tunemethod == "autotvm":
+        lib = autotvm_tune(network, target, args.input_name, log_file)
+    elif args.tunemethod == "autoscheduler":
+        lib = auto_scheduler_tune(network, target, args.input_name, log_file)
     else:
         raise ValueError("Unsupported scheduler: " + name)
 
-def benchmark(network, target, dtype, input_name, tune_kernel_log, tune_graph_log):
+def benchmark(network, target, log_file):
     mod, net_params, input_shape, output_shape = get_network(network)
-    method = "autotvm"
-    # run tuning tasks
-    print("Tuning...")
-    if (not os.path.exists(tune_graph_log)):
-        tune(network, target, input_name, tune_kernel_log, tune_graph_log, method)
+    if (args.tune):
+        print("Tuning...")
+        tune(network, target, args.input_name, log_file)
 
     print("Compile...")
     if method == "autotvm":
-        # compile kernels with graph-level best records
         with autotvm.apply_graph_best(tune_graph_log):
             with tvm.transform.PassContext(opt_level=3):
                 lib = relay.build_module.build(mod, target=target, params=net_params)  
     else:
-        return   
+        raise ValueError("Unsupported scheduler for compiling: " + name)   
 
     # upload parameters to device
     ctx = tvm.context(str(target), 0)
     data_tvm = tvm.nd.array((np.random.uniform(size=input_shape)).astype(dtype))
     module = runtime.GraphModule(lib["default"](ctx))
-    module.set_input(input_name, data_tvm)
+    module.set_input(args.input_name, data_tvm)
 
     # evaluate
     print("Evaluate...")
@@ -72,40 +69,45 @@ if __name__ == "__main__":
         help="The name of the test device. If your device is not listed in "
         "the choices list, pick the most similar one as argument.",
     )
-    parser.add_argument("--logdir", type=str, default="log", help="log directory")
+   
     parser.add_argument("--inputname", type=str, default="data", help="Input name of the graph. For ONNX models, it is typically 0")
     parser.add_argument("--repeat", type=int, default=600)
     parser.add_argument("--thread", type=int, default=1, help="The number of threads to be run.")
+    parser.add_argument("--logdir", type=str, default="log/", help="Log file directory.")
+    parser.add_argument("--tune", type=bool, default=True, help="Enable tuning.")
+    parser.add_argument(
+        "--tunemethod", 
+        type=str,
+        choices=["autotvm", "autoschduler"],
+        default="autotvm",
+        help="Tuning method",
+    )
+
     args = parser.parse_args()
     
     dtype = "float32"
-    target = "llvm"
 
     if args.network is None:
         networks = ["resnet-50", "mobilenet"]
     else:
         networks = [args.network]
 
-    target = tvm.target.Target("%s --mcpu=%s" % (target, args.mcpu))
-    if (not os.path.isdir(args.logdir)):
+    if not os.path.exists(args.logdir):
         os.mkdir(args.logdir)
-        
+
+    target = tvm.target.Target("%s --mcpu=%s" % ("llvm", args.mcpu))
     print("--------------------------------------------------")
     print("%-20s %-20s" % ("Network Name", "Mean Inference Time (std dev)"))
     print("--------------------------------------------------")
     for network in networks:
-        tune_kernel_log = "%s/%s_tune_kernel.log" % (args.logdir, network)
-        tune_graph_log = "%s/%s_tune_graph.log" % (args.logdir, network)
-
+        log_file = os.path.join(args.logdir, network + ".log")
         if args.thread == 1:
-            benchmark(network, target, dtype, args.inputname, 
-                        tune_kernel_log, tune_graph_log)
+            benchmark(network, target, log_file)
         else:
             threads = list()
             for n in range(args.thread):
                 thread = threading.Thread(
-                    target=benchmark, args=([network, target, dtype, args.inputname, 
-                                            tune_kernel_log, tune_graph_log]), name="thread%d" % n
+                    target=benchmark, args=([network, target, log_file]), name="thread%d" % n
                 )
                 threads.append(thread)
 
