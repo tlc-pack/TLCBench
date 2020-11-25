@@ -12,10 +12,11 @@ import tvm.contrib.graph_runtime as runtime
 from util import autotvm_tune, auto_scheduler_tune, get_network
 
 def tune(network, target, log_file):
+    print("---------------")
     if args.tunemethod == "autotvm":
-        lib = autotvm_tune(network, target, args.input_name, log_file)
+        lib = autotvm_tune(network, target, args.inputname, log_file)
     elif args.tunemethod == "autoscheduler":
-        lib = auto_scheduler_tune(network, target, args.input_name, log_file)
+        lib = auto_scheduler_tune(network, target, args.inputname, log_file)
     else:
         raise ValueError("Unsupported scheduler: " + name)
 
@@ -23,7 +24,7 @@ def benchmark(network, target, log_file):
     mod, net_params, input_shape, output_shape = get_network(network)
     if (args.tune):
         print("Tuning...")
-        tune(network, target, args.input_name, log_file)
+        tune(network, target, log_file)
 
     print("Compile...")
     if method == "autotvm":
@@ -37,7 +38,7 @@ def benchmark(network, target, log_file):
     ctx = tvm.context(str(target), 0)
     data_tvm = tvm.nd.array((np.random.uniform(size=input_shape)).astype(dtype))
     module = runtime.GraphModule(lib["default"](ctx))
-    module.set_input(args.input_name, data_tvm)
+    module.set_input(args.inputname, data_tvm)
 
     # evaluate
     print("Evaluate...")
@@ -84,7 +85,6 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    
     dtype = "float32"
 
     if args.network is None:

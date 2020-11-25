@@ -18,9 +18,9 @@ def benchmark(network, target, log_file):
     if args.tune:
         print("Tune...")
         if args.tunemethod == "autotvm":
-            autotvm_tune(network, target, args.input_name, log_file)
+            autotvm_tune(network, target, args.inputname, log_file)
         elif args.tunemethod == "autoscheduler":
-            auto_scheduler_tune(network, target, args.input_name, log_file)
+            auto_scheduler_tune(network, target, args.inputname, log_file)
         else:
             raise ValueError("Unsupported tuning method")
 
@@ -117,7 +117,7 @@ if __name__ == "__main__":
     for network in networks:
         log_file = os.path.join(args.logdir, network + ".log")
         if args.thread == 1:
-            benchmark(network, target, input_name, log_file)
+            benchmark(network, target, inputname, log_file)
         else:
             threads = list()
             for n in range(args.thread):
