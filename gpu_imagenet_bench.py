@@ -5,7 +5,7 @@ import threading
 import numpy as np
 
 import tvm
-from tvm import te, autotvm
+from tvm import te, autotvm, auto_scheduler
 import tvm.contrib.graph_runtime as runtime
 from tvm import relay
 
@@ -13,29 +13,33 @@ from util import get_network, autotvm_tune, auto_scheduler_tune
 
 
 
-def benchmark(network, target, input_name, kernel_log, graph_log, tune=True, method="ansor"):
+def benchmark(network, target, input_name, kernel_log, graph_log, tune=True, method="autotvm"):
     mod, params, input_shape, output_shape = get_network(network, batch_size=1)
 
     with tvm.transform.PassContext(opt_level=3):
         lib = relay.build(mod, target=target, params=params)
 
     # Tune
-    print("Tune...")
-    if not tune and not os.path.exists(graph_log):
-        # TODO
-        raise IOError("Pre-tuned file unaccessable")
+    #if not tune and not os.path.exists(graph_log):
+    #    # TODO
+    #    raise IOError("Pre-tuned file unaccessable")
 
-    if tune and os.path.exists(graph_log):
-        os.remove(graph_log)
+    #if tune and os.path.exists(graph_log):
+    #    os.remove(graph_log)
     
     if method == "autotvm":
-        autotvm_tune(network, target, input_name, kernel_log, graph_log)
+        if tune:
+            print("Tune...")
+            print(graph_log)
+            autotvm_tune(network, target, input_name, kernel_log, graph_log)
         print("Compile...")
         with  autotvm.apply_history_best(graph_log):
             with tvm.transform.PassContext(opt_level=3):
                 lib = relay.build_module.build(mod, target=target, params=params)
     elif method == "ansor":
-        auto_scheduler_tune(network, target, input_name, kernel_log, graph_log)
+        if tune:
+            print("Tune...")
+            auto_scheduler_tune(network, target, input_name, kernel_log, graph_log)
         print("Compile...")
         with auto_scheduler.ApplyHistoryBest(graph_log):
             with tvm.transform.PassContext(opt_level=3, config={"relay.backend.use_auto_scheduler": True}):

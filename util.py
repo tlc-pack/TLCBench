@@ -63,7 +63,7 @@ def autotvm_tune(network, target, input_name, kernel_log, graph_log):
 def autotvm_tuning_opt(target, network, log_file, dtype = "float32"):
     tuning_option = {
         "log_filename": log_file,
-        "tuner": "random",
+        "tuner": "xgb",
         "n_trial": 1,
         "early_stopping": 1,
         "measure_option": autotvm.measure_option(
