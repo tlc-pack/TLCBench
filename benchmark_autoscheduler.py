@@ -39,6 +39,8 @@ if __name__ == "__main__":
         choices=[
             "resnet-50",
             "mobilenet",
+            "bert",
+            "all"
         ],
         help="The name of neural network",
     )
@@ -51,12 +53,15 @@ if __name__ == "__main__":
     )
     parser.add_argument("--logdir", type=str, default="tuning_logs/", help="Log file directory.")
     parser.add_argument("--thread", type=int, default=1, help="The number of threads to be run.")
+    parser.add_argument("--inputname", type=str, default="data",
+                        help="Input name of the graph. For ONNX models, it is typically 0")
+    parser.add_argument("--repeat", type=int, default=100)
 
     args = parser.parse_args()
     dtype = "float32"
 
-    if args.network is None:
-        networks = ["resnet-50", "mobilenet"]
+    if args.network is None or args.network == "all":
+        networks = ["resnet-50", "mobilenet", "bert"]
     else:
         networks = [args.network]
 
