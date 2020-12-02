@@ -4,10 +4,14 @@ import tvm
 from tvm import relay
 from tvm.relay.testing import resnet
 
+import mxnet
+import gluonnlp
+
 def get_network(name, batch_size=1, dtype="float32"):
     """Get the symbol definition and random weight of a network"""
     input_shape = (batch_size, 3, 224, 224)
     output_shape = (batch_size, 1000)
+    seq_length = 128
 
     if "resnet" in name:
         n_layer = int(name.split("-")[1])
@@ -39,7 +43,30 @@ def get_network(name, batch_size=1, dtype="float32"):
             net.params, relay.nn.softmax(net.body), None, net.type_params, net.attrs
         )
         mod = tvm.IRModule.from_expr(net)
+    elif name == "bert":
+        # Instantiate a BERT classifier using GluonNLP
+        model_name = 'bert_12_768_12'
+        dataset = 'book_corpus_wiki_en_uncased'
+        model, _ = gluonnlp.model.get_model(
+            name=model_name,
+            dataset_name=dataset,
+            pretrained=True,
+            use_pooler=True,
+            use_decoder=False,
+            use_classifier=False)
+
+        # Convert the MXNet model into TVM Relay format
+        shape_dict = {
+            'data0': (batch_size, seq_length),
+            'data1': (batch_size, seq_length),
+            'data2': (batch_size,)
+        }
+        mod, params = relay.frontend.from_mxnet(model, shape_dict)
+
     else:
         raise ValueError("Unsupported network: " + name)
 
     return mod, params, input_shape, output_shape
+
+if __name__ == "__main__":
+    print(get_network("bert"))
