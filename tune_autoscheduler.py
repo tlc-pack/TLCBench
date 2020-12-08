@@ -32,13 +32,15 @@ if __name__ == "__main__":
         choices=[
             "resnet-50",
             "mobilenet",
+            "bert",
+            "all"
         ],
         help="The name of neural network",
     )
     parser.add_argument(
         "--target",
         type=str,
-        choices=["llvm -model=e5-2670 -mcpu=core-avx2"],
+        # choices=["llvm -model=e5-2670 -mcpu=core-avx2"],
         default="llvm -model=e5-2670 -mcpu=core-avx2",
         help="The tvm compilation target",
     )
@@ -50,8 +52,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     dtype = "float32"
 
-    if args.network is None:
-        networks = ["resnet-50", "mobilenet"]
+    if args.network is None or args.network == "all":
+        networks = ["resnet-50", "mobilenet", "bert"]
     else:
         networks = [args.network]
 

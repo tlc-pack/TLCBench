@@ -15,9 +15,9 @@ def autotvm_tune(network, target, input_name, log_file):
             mod["main"], target=target,
             params=params, ops=(relay.op.get("nn.conv2d"),)
     )
+
     if os.path.exists(log_file):
         os.remove(log_file)
-
 
     tmp_log = "tmp.log"
     tuning_opt = autotvm_tuning_opt(target, tmp_log)
@@ -96,13 +96,15 @@ if __name__ == "__main__":
         choices=[
             "resnet-50",
             "mobilenet",
+            "bert",
+            "all"
         ],
         help="The name of neural network",
     )
     parser.add_argument(
         "--target",
         type=str,
-        choices=["llvm -model=e5-2670 -mcpu=core-avx2"],
+        # choices=["llvm -model=e5-2670 -mcpu=core-avx2"],
         default="llvm -model=e5-2670 -mcpu=core-avx2",
         help="The tvm compilation target",
     )
@@ -114,8 +116,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     dtype = "float32"
 
-    if args.network is None:
-        networks = ["resnet-50", "mobilenet"]
+    if args.network is None or args.network == "all":
+        networks = ["resnet-50", "mobilenet", "bert"]
     else:
         networks = [args.network]
 

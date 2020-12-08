@@ -10,8 +10,27 @@ import tvm.contrib.graph_runtime as runtime
 
 from util import get_network
 
+
+def convert_layout(mod, target):
+    if target == "cuda":
+        desired_layouts = {'nn.conv2d': ['NHWC', 'default']}
+    else:
+        desired_layouts = {'nn.conv2d': ['NCHW', 'default']}
+
+    seq = tvm.transform.Sequential([relay.transform.RemoveUnusedFunctions(),
+                                    relay.transform.ConvertLayout(desired_layouts)])
+    with tvm.transform.PassContext(opt_level=3):
+        mod = seq(mod)
+
+    return mod
+
+
 def benchmark(network, target, log_file):
     mod, params, input_shape, output_shape = get_network(network)
+
+    if network != "bert":
+        mod = convert_layout(mod, target)
+
     with autotvm.apply_graph_best(log_file):
         with tvm.transform.PassContext(opt_level=3):
             lib = relay.build_module.build(mod, target=target, params=params)
