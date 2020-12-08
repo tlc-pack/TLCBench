@@ -31,7 +31,7 @@ def autotvm_tuning_opt(target, log_file, dtype = "float32"):
     tuning_option = {
         "log_filename": log_file,
         "tuner": "xgb",
-        "n_trial": 1,
+        "n_trial": None,
         "early_stopping": 1,
         "measure_option": autotvm.measure_option(
             builder=autotvm.LocalBuilder(timeout=10),
