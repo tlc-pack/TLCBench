@@ -64,7 +64,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--target",
         type=str,
-        choices=["llvm -model=e5-2670 -mcpu=core-avx2"],
         default="llvm -model=e5-2670 -mcpu=core-avx2",
         help="The tvm compilation target",
     )

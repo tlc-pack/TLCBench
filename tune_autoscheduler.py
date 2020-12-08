@@ -9,7 +9,7 @@ from util import get_network
 def auto_scheduler_tuning_opt(log_file, dtype = "float32"):
     measure_ctx = auto_scheduler.LocalRPCMeasureContext(repeat=1, min_repeat_ms=400, timeout=10)
     return auto_scheduler.TuningOptions(
-        num_measure_trials=200,
+        num_measure_trials=50,
         measure_callbacks=[auto_scheduler.RecordToFile(log_file)],
         runner=measure_ctx.runner,
         verbose=2,
@@ -40,7 +40,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--target",
         type=str,
-        # choices=["llvm -model=e5-2670 -mcpu=core-avx2"],
         default="llvm -model=e5-2670 -mcpu=core-avx2",
         help="The tvm compilation target",
     )
