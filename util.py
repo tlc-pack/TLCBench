@@ -12,6 +12,7 @@ def get_network(name, batch_size=1, dtype="float32"):
     """Get the symbol definition and random weight of a network"""
     input_shape = (batch_size, 3, 224, 224)
     output_shape = (batch_size, 1000)
+
     seq_length = 128
     multiplier = 0.5 # for mobilenet
 
@@ -59,13 +60,13 @@ def get_network(name, batch_size=1, dtype="float32"):
             use_classifier=False)
 
         # Convert the MXNet model into TVM Relay format
-        input_shape = {
+        shape_dict = {
             'data0': (batch_size, seq_length),
             'data1': (batch_size, seq_length),
             'data2': (batch_size,)
         }
         mod, params = relay.frontend.from_mxnet(model, shape_dict)
-
+        input_shape = shape_dict['data0']
     else:
         raise ValueError("Unsupported network: " + name)
 
