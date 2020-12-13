@@ -18,7 +18,7 @@ def autotvm_tune(network, target, input_name, log_file):
         tuning_opt = autotvm_tuning_opt(target, log_file)
         tasks = autotvm.task.extract_from_program(
             mod["main"], target=target,
-            params=params, ops=(relay.op.nn.batch_matmul, relay.op.nn.dense))
+            params=params, ops=(relay.op.get("nn.batch_matmul"), relay.op.get("nn.dense")))
         tune_kernels(tasks, **tuning_opt)
     else:
         tmp_log = "tmp.log"
