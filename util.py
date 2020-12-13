@@ -59,7 +59,7 @@ def get_network(name, batch_size=1, dtype="float32"):
             use_classifier=False)
 
         # Convert the MXNet model into TVM Relay format
-        shape_dict = {
+        input_shape = {
             'data0': (batch_size, seq_length),
             'data1': (batch_size, seq_length),
             'data2': (batch_size,)
