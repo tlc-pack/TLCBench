@@ -37,8 +37,7 @@ def autotvm_tuning_opt(target, log_file, dtype = "float32"):
     tuning_option = {
         "log_filename": log_file,
         "tuner": "xgb",
-        "n_trial": None,
-        "early_stopping": 1,
+        "early_stopping": None,
         "measure_option": autotvm.measure_option(
             builder=autotvm.LocalBuilder(timeout=10),
             runner=autotvm.LocalRunner(number=20, repeat=3, timeout=4, min_repeat_ms=150),
@@ -101,7 +100,7 @@ if __name__ == "__main__":
         type=str,
         choices=[
             "resnet-50",
-            "mobilenet",
+            "mobilenet_v2",
             "bert",
             "all"
         ],
@@ -122,7 +121,7 @@ if __name__ == "__main__":
     dtype = "float32"
 
     if args.network is None or args.network == "all":
-        networks = ["resnet-50", "mobilenet", "bert"]
+        networks = ["resnet-50", "mobilenet_v2", "bert"]
     else:
         networks = [args.network]
 
