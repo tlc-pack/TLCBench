@@ -10,25 +10,24 @@ from util import get_network
 
 
 def autotvm_tune(network, target, input_name, log_file):
+    if os.path.exists(log_file):
+        os.remove(log_file)
+    tmp_log = "tmp.log"
+    tuning_opt = autotvm_tuning_opt(target, tmp_log)
     mod, params, input_shape, output_shape = get_network(network)
 
     if network in ["bert"]:
         tasks = autotvm.task.extract_from_program(
             mod["main"], target=target,
-            params=params, ops=(relay.op.nn.batch_matmul, relay.op.nn.matmul, relay.op.nn.dense))
+            params=params, ops=(relay.op.nn.batch_matmul, relay.op.nn.dense))
+        tune_kernels(tasks, **tuning_opt)
     else:
         tasks = autotvm.task.extract_from_program(
                 mod["main"], target=target,
                 params=params, ops=(relay.op.get("nn.conv2d"),)
         )
-
-    if os.path.exists(log_file):
-        os.remove(log_file)
-
-    tmp_log = "tmp.log"
-    tuning_opt = autotvm_tuning_opt(target, tmp_log)
-    tune_kernels(tasks, **tuning_opt)
-    tune_graph(mod["main"], input_shape, tmp_log,
+        tune_kernels(tasks, **tuning_opt)
+        tune_graph(mod["main"], input_shape, tmp_log,
                 log_file, target, input_name)
     os.remove(tmp_log)
 
