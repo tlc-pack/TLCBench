@@ -66,7 +66,7 @@ def get_network(name, batch_size=1, dtype="float32"):
             'data2': (batch_size,)
         }
         mod, params = relay.frontend.from_mxnet(model, shape_dict)
-        input_shape = shape_dict['data0']
+        input_shape = (shape_dict['data0'], shape_dict['data1'], shape_dict['data2'])
     else:
         raise ValueError("Unsupported network: " + name)
 

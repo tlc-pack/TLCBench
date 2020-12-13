@@ -32,17 +32,24 @@ def benchmark(network, target, log_file):
         with autotvm.apply_history_best(log_file):
             with tvm.transform.PassContext(opt_level=3):
                 lib = relay.build_module.build(mod, target=target, params=params)
+                # upload parameters to device
+            ctx = tvm.context(str(target), 0)
+            data_tvm = tvm.nd.array((np.random.uniform(size=input_shape[0])).astype(dtype))
+            token_types_tvm = tvm.nd.array(np.random.uniform(size=input_shape[1]).astype(dtype))
+            valid_length_tvm = tvm.nd.array(np.random.uniform(size=input_shape[2]).astype(dtype))
+            module = runtime.GraphModule(lib["default"](ctx))
+            module.set_input(data0=data_tvm, data1=token_types_tvm, data2=valid_length_tvm)
     else:
         mod = convert_layout(mod, target)
         with autotvm.apply_graph_best(log_file):
             with tvm.transform.PassContext(opt_level=3):
                 lib = relay.build_module.build(mod, target=target, params=params)
 
-     # upload parameters to device
-    ctx = tvm.context(str(target), 0)
-    data_tvm = tvm.nd.array((np.random.uniform(size=input_shape)).astype(dtype))
-    module = runtime.GraphModule(lib["default"](ctx))
-    module.set_input(args.inputname, data_tvm)
+            # upload parameters to device
+            ctx = tvm.context(str(target), 0)
+            data_tvm = tvm.nd.array((np.random.uniform(size=input_shape)).astype(dtype))
+            module = runtime.GraphModule(lib["default"](ctx))
+            module.set_input(args.inputname, data_tvm)
 
     # evaluate
     print("Evaluate...")
