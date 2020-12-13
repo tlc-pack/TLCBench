@@ -11,10 +11,16 @@ from util import get_network
 
 def autotvm_tune(network, target, input_name, log_file):
     mod, params, input_shape, output_shape = get_network(network)
-    tasks = autotvm.task.extract_from_program(
+
+    if network in ["bert"]:
+        tasks = autotvm.task.extract_from_program(
             mod["main"], target=target,
-            params=params, ops=(relay.op.get("nn.conv2d"),)
-    )
+            params=params, ops=(relay.op.nn.batch_matmul, relay.op.nn.matmul, relay.op.nn.dense))
+    else:
+        tasks = autotvm.task.extract_from_program(
+                mod["main"], target=target,
+                params=params, ops=(relay.op.get("nn.conv2d"),)
+        )
 
     if os.path.exists(log_file):
         os.remove(log_file)
