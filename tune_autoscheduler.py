@@ -31,7 +31,7 @@ if __name__ == "__main__":
         type=str,
         choices=[
             "resnet-50",
-            "mobilenet",
+            "mobilenet_v2",
             "bert",
             "all"
         ],
@@ -52,7 +52,7 @@ if __name__ == "__main__":
     dtype = "float32"
 
     if args.network is None or args.network == "all":
-        networks = ["resnet-50", "mobilenet", "bert"]
+        networks = ["resnet-50", "mobilenet_v2", "bert"]
     else:
         networks = [args.network]
 
@@ -62,5 +62,5 @@ if __name__ == "__main__":
     target = tvm.target.Target(args.target)
 
     for network in networks:
-        log_file = os.path.join(args.logdir, network + ".log")
+        log_file = os.path.join(args.logdir, "autoscheduler_" + str(target) + "_" + network + ".log")
         auto_scheduler_tune(network, target, args.inputname, log_file)

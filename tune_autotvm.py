@@ -131,5 +131,5 @@ if __name__ == "__main__":
     target = tvm.target.Target(args.target)
 
     for network in networks:
-        log_file = os.path.join(args.logdir, network + ".log")
+        log_file = os.path.join(args.logdir, "autotvm_" + str(target) + "_" + network + ".log")
         autotvm_tune(network, target, args.inputname, log_file)
