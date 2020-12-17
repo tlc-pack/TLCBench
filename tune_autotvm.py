@@ -28,9 +28,12 @@ def autotvm_tune(network, target, input_name, log_file):
                 params=params, ops=(relay.op.get("nn.conv2d"),)
         )
         tune_kernels(tasks, **tuning_opt)
-        tune_graph(mod["main"], input_shape, tmp_log,
+        if target != "llvm":
+            os.rename(tmp_log, log_file)
+        else:
+            tune_graph(mod["main"], input_shape, tmp_log,
                 log_file, target, input_name)
-        os.remove(tmp_log)
+            os.remove(tmp_log)
 
 
 def autotvm_tuning_opt(target, log_file, dtype = "float32"):
@@ -131,5 +134,5 @@ if __name__ == "__main__":
     target = tvm.target.Target(args.target)
 
     for network in networks:
-        log_file = os.path.join(args.logdir, network + ".log")
+        log_file = os.path.join(args.logdir, "autotvm_" + network + ".log")
         autotvm_tune(network, target, args.inputname, log_file)
