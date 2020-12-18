@@ -28,7 +28,7 @@ def autotvm_tune(network, target, input_name, log_file):
                 params=params, ops=(relay.op.get("nn.conv2d"),)
         )
         tune_kernels(tasks, **tuning_opt)
-        if target != "llvm":
+        if str(target)[:4] == "cuda":
             os.rename(tmp_log, log_file)
         else:
             tune_graph(mod["main"], input_shape, tmp_log,
@@ -134,5 +134,5 @@ if __name__ == "__main__":
     target = tvm.target.Target(args.target)
 
     for network in networks:
-        log_file = os.path.join(args.logdir, "autotvm_" + network + ".log")
+        log_file = os.path.join(args.logdir, "autotvm_" + str(hash(target)) + "_" + network + ".log")
         autotvm_tune(network, target, args.inputname, log_file)

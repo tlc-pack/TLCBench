@@ -65,7 +65,7 @@ if __name__ == "__main__":
         type=str,
         choices=[
             "resnet-50",
-            "mobilenet",
+            "mobilenet_v2",
             "bert",
             "all"
         ],
@@ -87,7 +87,7 @@ if __name__ == "__main__":
     dtype = "float32"
 
     if args.network is None or args.network == "all":
-        networks = ["resnet-50", "mobilenet", "bert"]
+        networks = ["resnet-50", "mobilenet_v2", "bert"]
     else:
         networks = [args.network]
 
@@ -100,7 +100,8 @@ if __name__ == "__main__":
     print("%-20s %-20s" % ("Network Name", "Mean Inference Time (std dev)"))
     print("--------------------------------------------------")
     for network in networks:
-        log_file = os.path.join(args.logdir, target + "_" + network + ".log")
+        log_file = os.path.join(args.logdir, "autoscheduler_" + str(target)[:4] + "_" + network + ".log")
+        print(log_file)
         if args.thread == 1:
             benchmark(network, target, log_file)
         else:
