@@ -14,7 +14,7 @@ def get_network(name, batch_size=1, dtype="float32"):
     output_shape = (batch_size, 1000)
 
     seq_length = 128
-    multiplier = 0.5 # for mobilenet
+    multiplier = 1 # for mobilenet
 
     if "resnet" in name:
         n_layer = int(name.split("-")[1])

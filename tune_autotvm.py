@@ -9,10 +9,21 @@ from tvm.autotvm.graph_tuner import DPTuner, PBQPTuner
 from util import get_network
 
 
-def autotvm_tune(network, target, input_name, log_file):
-    if os.path.exists(log_file):
-        os.remove(log_file)
+def autotvm_tune(network, target, input_name, log_prefix):
+    graph_log = log_prefix + "_graph.log"
+    kernel_log = log_prefix + "_kernel.log"
+    if os.path.exists(kernel_log):
+        os.remove(kernel_log)
+    if os.path_exists(graph_log):
+        os.remove(graph_log)
     mod, params, input_shape, output_shape = get_network(network)
+
+    # covert to NCHW
+    desired_layouts = {'nn.conv2d': ['NCHW', 'default']}
+    seq = tvm.transform.Sequential([relay.transform.RemoveUnusedFunctions(),
+                                    relay.transform.ConvertLayout(desired_layouts)])
+    with tvm.transform.PassContext(opt_level=3):
+        mod = seq(mod)
 
     if network in ["bert"]:
         tuning_opt = autotvm_tuning_opt(target, log_file)
@@ -21,27 +32,37 @@ def autotvm_tune(network, target, input_name, log_file):
             params=params, ops=(relay.op.get("nn.batch_matmul"), relay.op.get("nn.dense")))
         tune_kernels(tasks, **tuning_opt)
     else:
-        tmp_log = "tmp.log"
-        tuning_opt = autotvm_tuning_opt(target, tmp_log)
+        tuning_opt = autotvm_tuning_opt(target, kernel_log)
         tasks = autotvm.task.extract_from_program(
                 mod["main"], target=target,
                 params=params, ops=(relay.op.get("nn.conv2d"),)
         )
         tune_kernels(tasks, **tuning_opt)
-        tune_graph(mod["main"], input_shape, tmp_log,
-                log_file, target, input_name)
-        os.remove(tmp_log)
+        tune_graph(mod["main"], input_shape, kernel_log,
+                graph_log, target, input_name)
 
 
 def autotvm_tuning_opt(target, log_file, dtype = "float32"):
+    if "cpu" in target.keys:
+        print("enable cpu tuning options")
+        measure_option = autotvm.measure_option(
+            builder=autotvm.LocalBuilder(),
+            runner=autotvm.LocalRunner(
+                number=1, repeat=10, min_repeat_ms=0, enable_cpu_cache_flush=True
+            ),
+        )
+    else:
+        print("enable gpu tuning options")
+        measure_option = autotvm.measure_option(
+                builder=autotvm.LocalBuilder(timeout=10),
+                runner=autotvm.LocalRunner(number=20, repeat=3, timeout=4, min_repeat_ms=150),
+            )
+
     tuning_option = {
         "log_filename": log_file,
         "tuner": "xgb",
         "early_stopping": None,
-        "measure_option": autotvm.measure_option(
-            builder=autotvm.LocalBuilder(timeout=10),
-            runner=autotvm.LocalRunner(number=20, repeat=3, timeout=4, min_repeat_ms=150),
-        ),
+        "measure_option": measure_option
     }
     return tuning_option
 
@@ -131,5 +152,5 @@ if __name__ == "__main__":
     target = tvm.target.Target(args.target)
 
     for network in networks:
-        log_file = os.path.join(args.logdir, "autotvm_" + str(target) + "_" + network + ".log")
-        autotvm_tune(network, target, args.inputname, log_file)
+        log_prefix = os.path.join(args.logdir, "autotvm_" + str(target) + "_" + network)
+        autotvm_tune(network, target, args.inputname, log_prefix)
