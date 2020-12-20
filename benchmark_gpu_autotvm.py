@@ -11,24 +11,15 @@ import tvm.contrib.graph_runtime as runtime
 from util import get_network
 
 
-def convert_layout(mod, target):
-    if target == "cuda":
-        print("target is cuda")
-        desired_layouts = {'nn.conv2d': ['NHWC', 'default']}
-    else:
-        print("target is ", target)
-        desired_layouts = {'nn.conv2d': ['NCHW', 'default']}
 
+def benchmark(network, target, log_file):
+    mod, params, input_shape, output_shape = get_network(network)
+    # covert to NCHW
+    desired_layouts = {'nn.conv2d': ['NCHW', 'default']}
     seq = tvm.transform.Sequential([relay.transform.RemoveUnusedFunctions(),
                                     relay.transform.ConvertLayout(desired_layouts)])
     with tvm.transform.PassContext(opt_level=3):
         mod = seq(mod)
-
-    return mod
-
-
-def benchmark(network, target, log_file):
-    mod, params, input_shape, output_shape = get_network(network)
 
     if network in ["bert"]:
         with autotvm.apply_history_best(log_file):
@@ -42,7 +33,6 @@ def benchmark(network, target, log_file):
             module = runtime.GraphModule(lib["default"](ctx))
             module.set_input(data0=data_tvm, data1=token_types_tvm, data2=valid_length_tvm)
     else:
-        mod = convert_layout(mod, target)
         with autotvm.apply_history_best(log_file):
             with tvm.transform.PassContext(opt_level=3):
                 lib = relay.build_module.build(mod, target=target, params=params)
@@ -103,8 +93,10 @@ if __name__ == "__main__":
     print("--------------------------------------------------")
     print("%-20s %-20s" % ("Network Name", "Mean Inference Time (std dev)"))
     print("--------------------------------------------------")
+
+    target_name = "gpu"
     for network in networks:
-        log_file = os.path.join(args.logdir, "autotvm_" + str(target) + "_" + network + ".log")
+        log_file = os.path.join(args.logdir, "autotvm_" + target_name + "_" + network + "_kernel.log")
         if args.thread == 1:
             benchmark(network, target, log_file)
         else:

@@ -62,5 +62,5 @@ if __name__ == "__main__":
     target = tvm.target.Target(args.target)
 
     for network in networks:
-        log_file = os.path.join(args.logdir, "autoscheduler_" + str(target) + "_" + network + ".log")
+        log_file = os.path.join(args.logdir, "autoscheduler_" + str(target)[:4] + "_" + network + ".log")
         auto_scheduler_tune(network, target, args.inputname, log_file)

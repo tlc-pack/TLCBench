@@ -26,7 +26,7 @@ def autotvm_tune(network, target, input_name, log_prefix):
         mod = seq(mod)
 
     if network in ["bert"]:
-        tuning_opt = autotvm_tuning_opt(target, log_file)
+        tuning_opt = autotvm_tuning_opt(target, kernel_log)
         tasks = autotvm.task.extract_from_program(
             mod["main"], target=target,
             params=params, ops=(relay.op.get("nn.batch_matmul"), relay.op.get("nn.dense")))
@@ -38,8 +38,9 @@ def autotvm_tune(network, target, input_name, log_prefix):
                 params=params, ops=(relay.op.get("nn.conv2d"),)
         )
         tune_kernels(tasks, **tuning_opt)
-        tune_graph(mod["main"], input_shape, kernel_log,
-                graph_log, target, input_name)
+        if "cpu" in target.keys:
+            tune_graph(mod["main"], input_shape, kernel_log,
+                    graph_log, target, input_name)
 
 
 def autotvm_tuning_opt(target, log_file, dtype = "float32"):
@@ -151,6 +152,10 @@ if __name__ == "__main__":
 
     target = tvm.target.Target(args.target)
 
+    if "cpu" in target.keys:
+        target_name = "cpu"
+    else:
+        target_name = "cuda"
     for network in networks:
-        log_prefix = os.path.join(args.logdir, "autotvm_" + str(target) + "_" + network)
+        log_prefix = os.path.join(args.logdir, "autotvm_" + target_name + "_" + network)
         autotvm_tune(network, target, args.inputname, log_prefix)
