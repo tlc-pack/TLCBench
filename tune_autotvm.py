@@ -14,7 +14,7 @@ def autotvm_tune(network, target, input_name, log_prefix):
     kernel_log = log_prefix + "_kernel.log"
     if os.path.exists(kernel_log):
         os.remove(kernel_log)
-    if os.path_exists(graph_log):
+    if os.path.exists(graph_log):
         os.remove(graph_log)
     mod, params, input_shape, output_shape = get_network(network)
 
