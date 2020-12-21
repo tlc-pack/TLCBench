@@ -38,7 +38,13 @@ def benchmark(network, target, log_file):
             module = runtime.GraphModule(lib["default"](ctx))
             module.set_input(data0=data_tvm, data1=token_types_tvm, data2=valid_length_tvm)
     else:
-        mod = convert_layout(mod, target)
+        # convert to NHWC layout
+        desired_layouts = {'nn.conv2d': ['NHWC', 'default']}
+        seq = tvm.transform.Sequential([relay.transform.RemoveUnusedFunctions(),
+                                        relay.transform.ConvertLayout(desired_layouts)])
+        with tvm.transform.PassContext(opt_level=3):
+            mod = seq(mod)
+
         with auto_scheduler.ApplyHistoryBest(log_file):
             with tvm.transform.PassContext(opt_level=3, config={"relay.backend.use_auto_scheduler": True}):
                 lib = relay.build(mod, target=target, params=params)
@@ -99,8 +105,14 @@ if __name__ == "__main__":
     print("--------------------------------------------------")
     print("%-20s %-20s" % ("Network Name", "Mean Inference Time (std dev)"))
     print("--------------------------------------------------")
+
+    if "cpu" in target.keys:
+        target_name = "cpu"
+    else:
+        target_name = "cuda"
+
     for network in networks:
-        log_file = os.path.join(args.logdir, "autoscheduler_" + str(target)[:4] + "_" + network + ".log")
+        log_file = os.path.join(args.logdir, "autoscheduler_" + target_name + "_" + network + ".log")
         print(log_file)
         if args.thread == 1:
             benchmark(network, target, log_file)
