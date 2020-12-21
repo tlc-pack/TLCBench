@@ -11,7 +11,7 @@ import tvm.contrib.graph_runtime as runtime
 from util import get_network
 
 
-def benchmark(network, target, log_file):
+def benchmark(network, target, log_prefix):
     mod, params, input_shape, output_shape = get_network(network)
     # covert to NCHW
     desired_layouts = {'nn.conv2d': ['NCHW', 'default']}
@@ -21,6 +21,7 @@ def benchmark(network, target, log_file):
         mod = seq(mod)
 
     if network in ["bert"]:
+        log_file = log_prefix + "_kernel.log"
         with autotvm.apply_history_best(log_file):
             with tvm.transform.PassContext(opt_level=3):
                 lib = relay.build_module.build(mod, target=target, params=params)
@@ -32,6 +33,7 @@ def benchmark(network, target, log_file):
             module = runtime.GraphModule(lib["default"](ctx))
             module.set_input(data0=data_tvm, data1=token_types_tvm, data2=valid_length_tvm)
     else:
+        log_file = log_prefix + "_graph.log"
         with autotvm.apply_graph_best(log_file):
             with tvm.transform.PassContext(opt_level=3):
                 lib = relay.build_module.build(mod, target=target, params=params)
@@ -95,14 +97,14 @@ if __name__ == "__main__":
 
     target_name = "cpu"
     for network in networks:
-        log_file = os.path.join(args.logdir, "autotvm_" + target_name + "_" + network + "_graph.log")
+        log_prefix = os.path.join(args.logdir, "autotvm_" + target_name + "_" + network)
         if args.thread == 1:
-            benchmark(network, target, log_file)
+            benchmark(network, target, log_prefix)
         else:
             threads = list()
             for n in range(args.thread):
                 thread = threading.Thread(
-                    target=benchmark, args=([network, target, log_file]), name="thread%d" % n
+                    target=benchmark, args=([network, target, log_prefix]), name="thread%d" % n
                 )
                 threads.append(thread)
 
