@@ -18,13 +18,6 @@ def autotvm_tune(network, target, input_name, log_prefix):
         os.remove(graph_log)
     mod, params, input_shape, output_shape = get_network(network)
 
-    # covert to NCHW
-    desired_layouts = {'nn.conv2d': ['NCHW', 'default']}
-    seq = tvm.transform.Sequential([relay.transform.RemoveUnusedFunctions(),
-                                    relay.transform.ConvertLayout(desired_layouts)])
-    with tvm.transform.PassContext(opt_level=3):
-        mod = seq(mod)
-
     if network in ["bert"]:
         tuning_opt = autotvm_tuning_opt(target, kernel_log)
         tasks = autotvm.task.extract_from_program(
@@ -32,6 +25,13 @@ def autotvm_tune(network, target, input_name, log_prefix):
             params=params, ops=(relay.op.get("nn.batch_matmul"), relay.op.get("nn.dense")))
         tune_kernels(tasks, **tuning_opt)
     else:
+        # covert to NCHW
+        desired_layouts = {'nn.conv2d': ['NCHW', 'default']}
+        seq = tvm.transform.Sequential([relay.transform.RemoveUnusedFunctions(),
+                                        relay.transform.ConvertLayout(desired_layouts)])
+        with tvm.transform.PassContext(opt_level=3):
+            mod = seq(mod)
+
         tuning_opt = autotvm_tuning_opt(target, kernel_log)
         tasks = autotvm.task.extract_from_program(
                 mod["main"], target=target,

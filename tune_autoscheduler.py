@@ -25,12 +25,13 @@ def auto_scheduler_tune(network, target, input_name, log_file):
     if os.path.exists(log_file):
         os.remove(log_file)
     mod, net_params, input_shape, output_shape = get_network(network)
-    # convert to NHWC layout
-    desired_layouts = {'nn.conv2d': ['NHWC', 'default']}
-    seq = tvm.transform.Sequential([relay.transform.RemoveUnusedFunctions(),
-                                    relay.transform.ConvertLayout(desired_layouts)])
-    with tvm.transform.PassContext(opt_level=3):
-        mod = seq(mod)
+    if network not in ["bert"]:
+        # convert to NHWC layout
+        desired_layouts = {'nn.conv2d': ['NHWC', 'default']}
+        seq = tvm.transform.Sequential([relay.transform.RemoveUnusedFunctions(),
+                                        relay.transform.ConvertLayout(desired_layouts)])
+        with tvm.transform.PassContext(opt_level=3):
+            mod = seq(mod)
 
     tasks, task_weights = auto_scheduler.extract_tasks(mod["main"], net_params, target)
     tuner = auto_scheduler.TaskScheduler(tasks, task_weights)
