@@ -5,22 +5,6 @@ import tvm
 from tvm import relay, auto_scheduler
 from util import get_network
 
-
-def auto_scheduler_tuning_opt(target, log_file, dtype = "float32"):
-    if "cpu" in target.keys:
-        return auto_scheduler.TuningOptions(
-            num_measure_trials=20000,  # change this to 20000 to achieve the best performance
-            runner=auto_scheduler.LocalRunner(repeat=10, enable_cpu_cache_flush=True),
-            measure_callbacks=[auto_scheduler.RecordToFile(log_file)],
-        )
-    else:
-        measure_ctx = auto_scheduler.LocalRPCMeasureContext(repeat=1, min_repeat_ms=300, timeout=10)
-        return auto_scheduler.TuningOptions(
-            num_measure_trials=20000,  # change this to 20000 to achieve the best performance
-            runner=measure_ctx.runner,
-            measure_callbacks=[auto_scheduler.RecordToFile(log_file)],
-        )
-
 def auto_scheduler_tune(network, target, input_name, log_file):
     if os.path.exists(log_file):
         os.remove(log_file)
@@ -33,9 +17,23 @@ def auto_scheduler_tune(network, target, input_name, log_file):
         with tvm.transform.PassContext(opt_level=3):
             mod = seq(mod)
 
+    if "cpu" in target.keys:
+        tuning_opt = auto_scheduler.TuningOptions(
+            num_measure_trials=20000,  # change this to 20000 to achieve the best performance
+            runner=auto_scheduler.LocalRunner(repeat=10, enable_cpu_cache_flush=True),
+            measure_callbacks=[auto_scheduler.RecordToFile(log_file)],
+        )
+    else:
+        measure_ctx = auto_scheduler.LocalRPCMeasureContext(repeat=1, min_repeat_ms=300, timeout=10)
+        tuning_opt = auto_scheduler.TuningOptions(
+            num_measure_trials=20000,  # change this to 20000 to achieve the best performance
+            runner=measure_ctx.runner,
+            measure_callbacks=[auto_scheduler.RecordToFile(log_file)],
+        )
+
     tasks, task_weights = auto_scheduler.extract_tasks(mod["main"], net_params, target)
     tuner = auto_scheduler.TaskScheduler(tasks, task_weights)
-    tuner.tune(auto_scheduler_tuning_opt(target, log_file))
+    tuner.tune(tuning_opt)
 
 
 if __name__ == "__main__":
