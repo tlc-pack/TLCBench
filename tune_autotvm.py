@@ -6,74 +6,82 @@ from tvm import relay, autotvm
 from tvm.autotvm.tuner import XGBTuner, GATuner, RandomTuner, GridSearchTuner
 from tvm.autotvm.graph_tuner import DPTuner, PBQPTuner
 
-from util import get_network
+from utils import get_network, make_network_key
 
 
-def autotvm_tune(network, target, input_name, log_prefix):
-    graph_log = log_prefix + "_graph.log"
-    kernel_log = log_prefix + "_kernel.log"
+def autotvm_tune(network, batch_size, dtype, target, log_prefix):
+    graph_log = log_prefix + ".graph.log"
+    kernel_log = log_prefix + ".kernel.log"
+    os.makedirs(os.path.dirname(graph_log), exist_ok=True)
     if os.path.exists(kernel_log):
         os.remove(kernel_log)
     if os.path.exists(graph_log):
         os.remove(graph_log)
-    mod, params, input_shape, output_shape = get_network(network)
+
+    layout = "NCHW"
+    mod, params, input_name, input_shape, output_shape = get_network(
+        network, batch_size, dtype, layout
+    )
 
     if network in ["bert"]:
         tuning_opt = autotvm_tuning_opt(target, kernel_log)
         tasks = autotvm.task.extract_from_program(
-            mod["main"], target=target,
-            params=params, ops=(relay.op.get("nn.batch_matmul"), relay.op.get("nn.dense")))
+            mod["main"],
+            target=target,
+            params=params,
+            ops=(relay.op.get("nn.batch_matmul"), relay.op.get("nn.dense")),
+        )
         tune_kernels(tasks, **tuning_opt)
     else:
-        # covert to NCHW
-        desired_layouts = {'nn.conv2d': ['NCHW', 'default']}
-        seq = tvm.transform.Sequential([relay.transform.RemoveUnusedFunctions(),
-                                        relay.transform.ConvertLayout(desired_layouts)])
-        with tvm.transform.PassContext(opt_level=3):
-            mod = seq(mod)
-
         tuning_opt = autotvm_tuning_opt(target, kernel_log)
         tasks = autotvm.task.extract_from_program(
-                mod["main"], target=target,
-                params=params, ops=(relay.op.get("nn.conv2d"),)
+            mod["main"],
+            target=target,
+            params=params,
+            ops=(relay.op.get("nn.conv2d"), relay.op.get("nn.dense")),
         )
         tune_kernels(tasks, **tuning_opt)
         if "cpu" in target.keys:
-            tune_graph(mod["main"], input_shape, kernel_log,
-                    graph_log, target, input_name)
+            tune_graph(
+                mod["main"], input_name, input_shape, target, kernel_log, graph_log
+            )
 
 
-def autotvm_tuning_opt(target, log_file, dtype = "float32"):
+def autotvm_tuning_opt(target, log_file, dtype="float32"):
     if "cpu" in target.keys:
-        print("enable cpu tuning options")
         measure_option = autotvm.measure_option(
-            builder=autotvm.LocalBuilder(),
+            builder=autotvm.LocalBuilder(timeout=10),
             runner=autotvm.LocalRunner(
-                number=1, repeat=10, min_repeat_ms=0, enable_cpu_cache_flush=True
+                number=1, repeat=10, enable_cpu_cache_flush=True
             ),
         )
+        tuner = 'random'
     else:
-        print("enable gpu tuning options")
         measure_option = autotvm.measure_option(
-                builder=autotvm.LocalBuilder(timeout=10),
-                runner=autotvm.LocalRunner(number=20, repeat=3, timeout=4, min_repeat_ms=150),
-            )
+            builder=autotvm.LocalBuilder(timeout=10),
+            runner=autotvm.LocalRunner(
+                number=20, repeat=3, timeout=4, min_repeat_ms=150
+            ),
+        )
+        tuner = 'xgb'
 
     tuning_option = {
         "log_filename": log_file,
-        "tuner": "xgb",
+        "tuner": tuner,
         "early_stopping": None,
-        "measure_option": measure_option
+        "n_trial": 1200,
+        "measure_option": measure_option,
     }
     return tuning_option
+
 
 def tune_kernels(
     tasks,
     measure_option,
-    tuner="xgb",
-    n_trial=1000,
-    early_stopping=None,
-    log_filename="tuning.log"
+    tuner,
+    n_trial,
+    early_stopping,
+    log_filename,
 ):
     for i, tsk in enumerate(reversed(tasks)):
         prefix = "[Task %2d/%2d] " % (i + 1, len(tasks))
@@ -101,18 +109,20 @@ def tune_kernels(
             ],
         )
 
+
 # Use graph tuner to achieve graph level optimal schedules
 # Set use_DP=False if it takes too long to finish.
-def tune_graph(graph, dshape, records, opt_sch_file, target, input_name, use_DP=True):
+def tune_graph(
+    graph, input_name, input_shape, target, kernel_log, graph_log, use_DP=True
+):
     target_op = [
         relay.op.get("nn.conv2d"),
     ]
     Tuner = DPTuner if use_DP else PBQPTuner
-    executor = Tuner(graph, {input_name: dshape}, records, target_op, target)
+    executor = Tuner(graph, {input_name: input_shape}, kernel_log, target_op, target)
     executor.benchmark_layout_transform(min_exec_num=2000)
     executor.run()
-    executor.write_opt_sch2record_file(opt_sch_file)
-
+    executor.write_opt_sch2record_file(graph_log)
 
 
 if __name__ == "__main__":
@@ -120,42 +130,37 @@ if __name__ == "__main__":
     parser.add_argument(
         "--network",
         type=str,
-        choices=[
-            "resnet-50",
-            "mobilenet_v2",
-            "bert",
-            "all"
-        ],
-        help="The name of neural network",
+        choices=["resnet_50", "mobilenet_v2", "bert", "all"],
+        default="all",
+        help="The name of the neural network.",
     )
+    parser.add_argument("--batch-size", type=int, default=1, help="The batch size")
     parser.add_argument(
         "--target",
         type=str,
-        default="llvm -model=e5-2670 -mcpu=core-avx2",
-        help="The tvm compilation target",
+        default="llvm -model=platinum-8124m -mcpu=skylake-avx512",
+        help="The compilation target.",
     )
-    parser.add_argument("--logdir", type=str, default="tuning_logs/", help="Log file directory.")
-    parser.add_argument("--thread", type=int, default=1, help="The number of threads to be run.")
-    parser.add_argument("--inputname", type=str, default="data",
-                        help="Input name of the graph. For ONNX models, it is typically 0")
-
+    parser.add_argument("--dtype", type=str, default="float32", help="The data type.")
+    parser.add_argument(
+        "--logdir", type=str, default="tuning_logs/", help="Log file directory."
+    )
     args = parser.parse_args()
-    dtype = "float32"
 
-    if args.network is None or args.network == "all":
-        networks = ["resnet-50", "mobilenet_v2", "bert"]
+    if args.network == "all":
+        networks = ["resnet_50", "mobilenet_v2", "bert"]
     else:
         networks = [args.network]
-
-    if not os.path.exists(args.logdir):
-        os.mkdir(args.logdir)
+    batch_sizes = [args.batch_size]
+    dtypes = [args.dtype]
 
     target = tvm.target.Target(args.target)
 
-    if "cpu" in target.keys:
-        target_name = "cpu"
-    else:
-        target_name = "cuda"
     for network in networks:
-        log_prefix = os.path.join(args.logdir, "autotvm_" + target_name + "_" + network)
-        autotvm_tune(network, target, args.inputname, log_prefix)
+        for batch_size in batch_sizes:
+            for dtype in dtypes:
+                network_key = make_network_key(network, batch_size, dtype)
+                log_prefix = os.path.join(
+                    args.logdir, "autotvm", target.model, network_key
+                )
+                autotvm_tune(network, batch_size, dtype, target, log_prefix)
