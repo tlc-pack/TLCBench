@@ -8,46 +8,25 @@ import mxnet
 import gluonnlp
 from mxnet.gluon.model_zoo.vision import get_model
 
-def get_network(name, batch_size=1, dtype="float32"):
+def get_network(name, batch_size=1, dtype="float32", layout="NCHW"):
     """Get the symbol definition and random weight of a network"""
+    input_name = "data"
     input_shape = (batch_size, 3, 224, 224)
     output_shape = (batch_size, 1000)
 
-    seq_length = 128
-    multiplier = 1 # for mobilenet
-
     if "resnet" in name:
-        n_layer = int(name.split("-")[1])
+        n_layer = int(name.split("_")[1])
         block = mxnet.gluon.model_zoo.vision.get_resnet(1, n_layer, pretrained=True)
         mod, params = relay.frontend.from_mxnet(block, shape={"data": input_shape}, dtype=dtype)
-    elif "vgg" in name:
-        n_layer = int(name.split("-")[1])
-        mod, params = testing.vgg.get_workload(
-            num_layers=n_layer, batch_size=batch_size, dtype=dtype
-        )
-    elif name == "mobilenet":
-        mod, params = relay.testing.mobilenet.get_workload(batch_size=batch_size, dtype=dtype)
-    elif name == "squeezenet_v1.1":
-        mod, params = relay.testing.squeezenet.get_workload(
-            batch_size=batch_size, version="1.1", dtype=dtype
-        )
+        assert layout == "NCHW"
     elif name == "mobilenet_v2":
+        multiplier = 1
         block = mxnet.gluon.model_zoo.vision.get_mobilenet_v2(multiplier, pretrained=True)
         mod, params = relay.frontend.from_mxnet(block, shape={"data": input_shape}, dtype=dtype)
-    elif name == "inception_v3":
-        input_shape = (batch_size, 3, 299, 299)
-        mod, params = relay.testing.inception_v3.get_workload(batch_size=batch_size, dtype=dtype)
-    elif name == "mxnet":
-
-        block = get_model("resnet18_v1", pretrained=True)
-        mod, params = relay.frontend.from_mxnet(block, shape={"data": input_shape}, dtype=dtype)
-        net = mod["main"]
-        net = relay.Function(
-            net.params, relay.nn.softmax(net.body), None, net.type_params, net.attrs
-        )
-        mod = tvm.IRModule.from_expr(net)
-
+        assert layout == "NCHW"
     elif name == "bert":
+        seq_length = 128
+
         # Instantiate a BERT classifier using GluonNLP
         model_name = 'bert_12_768_12'
         dataset = 'book_corpus_wiki_en_uncased'
@@ -76,11 +55,14 @@ def get_network(name, batch_size=1, dtype="float32"):
         mod = tvm.relay.transform.FoldConstant()(mod)
         mod = tvm.relay.transform.CombineParallelBatchMatmul()(mod)
         mod = tvm.relay.transform.FoldConstant()(mod)
-
     else:
         raise ValueError("Unsupported network: " + name)
 
-    return mod, params, input_shape, output_shape
+    return mod, params, input_name, input_shape, output_shape
+
+
+def make_network_key(network_name, batch_size, dtype):
+    return "%s-B%s-%s" % (network_name, batch_size, dtype)
 
 
 if __name__ == "__main__":
