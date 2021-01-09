@@ -9,11 +9,11 @@ from utils import get_network, make_network_key
 
 network_to_n_trials = {
     # CPU
-    ("resnet-50", 1, "float32", "llvm"): 20000,
+    ("resnet_50", 1, "float32", "llvm"): 20000,
     ("mobilenet_v2", 1, "float32", "llvm"): 15000,
     ("bert", 1, "float32", "llvm"): 10000,
     # GPU
-    ("resnet-50", 1, "float32", "cuda"): 20000,
+    ("resnet_50", 1, "float32", "cuda"): 20000,
     ("mobilenet_v2", 1, "float32", "cuda"): 16000,
     ("bert", 1, "float32", "cuda"): 12000,
 }
