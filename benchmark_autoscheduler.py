@@ -55,16 +55,7 @@ def benchmark(network, batch_size, dtype, target, log_file, repeat):
 
     # Evaluate
     ftimer = module.module.time_evaluator("run", ctx, number=1, repeat=repeat)
-    prof_res = np.array(ftimer().results) * 1000  # convert to millisecond
-    print(
-        "%-18s %-12s %-19s (%s)"
-        % (
-            network,
-            batch_size,
-            "%.2f ms" % np.mean(prof_res),
-            "%.2f ms" % np.std(prof_res),
-        )
-    )
+    return np.array(ftimer().results)
 
 
 if __name__ == "__main__":
@@ -99,18 +90,37 @@ if __name__ == "__main__":
 
     target = tvm.target.Target(args.target)
 
+    # Benchmark
+    result_messages = []
+    for network in networks:
+        for batch_size in batch_sizes:
+            for dtype in dtypes:
+                network_key = make_network_key(network, batch_size, dtype)
+                print("Benchmark %s ..." % network_key)
+
+                log_file = os.path.join(
+                    args.logdir, "autoscheduler", target.model, network_key + ".json"
+                )
+                prof_res = benchmark(
+                    network, batch_size, dtype, target, log_file, args.repeat
+                )
+
+                prof_res *= 1000  # convert to millisecond
+                message = "%-18s %-12s %-19s (%s)" % (
+                    network,
+                    batch_size,
+                    "%.2f ms" % np.mean(prof_res),
+                    "%.2f ms" % np.std(prof_res),
+                )
+                result_messages.append(message)
+
+    # Print result
     print("-------------------------------------------------------------")
     print(
         "%-18s %-12s %-20s"
         % ("Network Name", "Batch size", "Mean Inference Time (std dev)")
     )
     print("-------------------------------------------------------------")
-
-    for network in networks:
-        for batch_size in batch_sizes:
-            for dtype in dtypes:
-                network_key = make_network_key(network, batch_size, dtype)
-                log_file = os.path.join(
-                    args.logdir, "autoscheduler", target.model, network_key + ".json"
-                )
-                benchmark(network, batch_size, dtype, target, log_file, args.repeat)
+    for line in result_messages:
+        print(line)
+    print("-------------------------------------------------------------")

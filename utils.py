@@ -88,7 +88,7 @@ def make_network_key(network_name, batch_size, dtype):
 def use_graph_tuner(network_name, batch_size, dtype, target):
     """Return whether use graph tuner for a network on a target"""
     # Only use graph tuner for CNNs on CPUs
-    return "cpu" in target.keys and not (network in ["bert"])
+    return "cpu" in target.keys and not (network_name in ["bert"])
 
 
 def convert_to_nhwc(mod):
