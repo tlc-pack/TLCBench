@@ -15,7 +15,7 @@ network_to_n_trials = {
     # GPU
     ("resnet_50", 1, "float32", "cuda"): 20000,
     ("mobilenet_v2", 1, "float32", "cuda"): 16000,
-    ("bert", 1, "float32", "cuda"): 12000,
+    ("bert", 1, "float32", "cuda"): 100,
 }
 
 
@@ -48,6 +48,10 @@ def auto_scheduler_tune(network, batch_size, dtype, target, log_file):
         )
 
     tasks, task_weights = auto_scheduler.extract_tasks(mod["main"], params, target)
+    for idx, task in enumerate(tasks):
+        print("========== Task %d  (workload key: %s) ==========" % (idx, task.workload_key))
+        print(task.compute_dag)
+
     tuner = auto_scheduler.TaskScheduler(tasks, task_weights)
     tuner.tune(tuning_opt)
 
