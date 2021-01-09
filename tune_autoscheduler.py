@@ -20,6 +20,7 @@ network_to_n_trials = {
 
 
 def auto_scheduler_tune(network, batch_size, dtype, target, log_file):
+    os.makedirs(os.path.dirname(log_file), exist_ok=True)
     if os.path.exists(log_file):
         os.remove(log_file)
 
