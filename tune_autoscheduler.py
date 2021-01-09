@@ -24,7 +24,7 @@ def auto_scheduler_tune(network, batch_size, dtype, target, log_file):
     if os.path.exists(log_file):
         os.remove(log_file)
 
-    layout = "NCHW"
+    layout = "NHWC"
     mod, params, input_name, input_shape, output_shape = get_network(
         network, batch_size, dtype, layout
     )
