@@ -10,8 +10,8 @@ from utils import get_network, make_network_key
 
 
 def autotvm_tune(network, batch_size, dtype, target, log_prefix):
-    graph_log = log_prefix + ".graph.log"
     kernel_log = log_prefix + ".kernel.log"
+    graph_log = log_prefix + ".graph.log"
     os.makedirs(os.path.dirname(graph_log), exist_ok=True)
     if os.path.exists(kernel_log):
         os.remove(kernel_log)
@@ -22,56 +22,53 @@ def autotvm_tune(network, batch_size, dtype, target, log_prefix):
     mod, params, input_name, input_shape, output_shape = get_network(
         network, batch_size, dtype, layout
     )
+    tuning_opt = get_tuning_option(target, kernel_log)
+    ops = [
+        relay.op.get("nn.batch_matmul"),
+        relay.op.get("nn.dense"),
+        relay.op.get("nn.conv2d"),
+    ]
 
-    if network in ["bert"]:
-        tuning_opt = autotvm_tuning_opt(target, kernel_log)
-        tasks = autotvm.task.extract_from_program(
-            mod["main"],
-            target=target,
-            params=params,
-            ops=(relay.op.get("nn.batch_matmul"), relay.op.get("nn.dense")),
-        )
-        tune_kernels(tasks, **tuning_opt)
-    else:
-        tuning_opt = autotvm_tuning_opt(target, kernel_log)
-        tasks = autotvm.task.extract_from_program(
-            mod["main"],
-            target=target,
-            params=params,
-            ops=(relay.op.get("nn.conv2d"), relay.op.get("nn.dense")),
-        )
-        tune_kernels(tasks, **tuning_opt)
-        if "cpu" in target.keys:
-            tune_graph(
-                mod["main"], input_name, input_shape, target, kernel_log, graph_log
-            )
+    tasks = autotvm.task.extract_from_program(
+        mod["main"], target=target, params=params, ops=ops
+    )
+    tune_kernels(tasks, **tuning_opt)
+
+    if "cpu" in target.keys and not (network in ["bert"]):
+        tune_graph(mod["main"], input_name, input_shape, target, kernel_log, graph_log)
 
 
-def autotvm_tuning_opt(target, log_file, dtype="float32"):
+def get_tuning_option(target, log_file, dtype="float32"):
     if "cpu" in target.keys:
-        measure_option = autotvm.measure_option(
-            builder=autotvm.LocalBuilder(timeout=10),
-            runner=autotvm.LocalRunner(
-                number=1, repeat=10, enable_cpu_cache_flush=True
+        tuning_option = {
+            "log_filename": log_file,
+            "tuner": "random",
+            "n_trial": 1200,
+            "early_stopping": None,
+            "use_transfer_learning": False,
+            "measure_option": autotvm.measure_option(
+                builder=autotvm.LocalBuilder(timeout=10),
+                # runner=autotvm.LocalRunner(number=10, repeat=1, min_repeat_ms=1000),
+                runner=autotvm.LocalRunner(
+                    number=1, repeat=10, enable_cpu_cache_flush=True
+                ),
             ),
-        )
-        tuner = 'random'
+        }
     else:
-        measure_option = autotvm.measure_option(
-            builder=autotvm.LocalBuilder(timeout=10),
-            runner=autotvm.LocalRunner(
-                number=20, repeat=3, timeout=4, min_repeat_ms=150
+        tuning_option = {
+            "log_filename": log_file,
+            "tuner": "xgb",
+            "n_trial": 2000,
+            "early_stopping": 600,
+            "use_transfer_learning": True,
+            "measure_option": autotvm.measure_option(
+                builder=autotvm.LocalBuilder(timeout=10),
+                runner=autotvm.LocalRunner(
+                    number=20, repeat=3, timeout=4, min_repeat_ms=150
+                ),
             ),
-        )
-        tuner = 'xgb'
+        }
 
-    tuning_option = {
-        "log_filename": log_file,
-        "tuner": tuner,
-        "early_stopping": None,
-        "n_trial": 1200,
-        "measure_option": measure_option,
-    }
     return tuning_option
 
 
@@ -82,6 +79,7 @@ def tune_kernels(
     n_trial,
     early_stopping,
     log_filename,
+    use_transfer_learning,
 ):
     for i, tsk in enumerate(reversed(tasks)):
         prefix = "[Task %2d/%2d] " % (i + 1, len(tasks))
@@ -96,6 +94,10 @@ def tune_kernels(
             tuner_obj = GridSearchTuner(tsk)
         else:
             raise ValueError("Invalid tuner: " + tuner)
+
+        if use_transfer_learning:
+            if os.path.isfile(log_filename):
+                tuner_obj.load_history(autotvm.record.load_from_file(log_filename))
 
         # do tuning
         tsk_trial = min(n_trial, len(tsk.config_space))
