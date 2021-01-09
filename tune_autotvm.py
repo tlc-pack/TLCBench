@@ -162,6 +162,8 @@ if __name__ == "__main__":
         for batch_size in batch_sizes:
             for dtype in dtypes:
                 network_key = make_network_key(network, batch_size, dtype)
+                print("Tune %s ..." % network_key)
+
                 log_prefix = os.path.join(
                     args.logdir, "autotvm", target.model, network_key
                 )

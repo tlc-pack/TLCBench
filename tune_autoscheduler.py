@@ -3,35 +3,50 @@ import argparse
 
 import tvm
 from tvm import relay, auto_scheduler
-from util import get_network
 
-def auto_scheduler_tune(network, target, input_name, log_file):
+from utils import get_network, make_network_key
+
+
+network_to_n_trials = {
+    # CPU
+    ("resnet-50", 1, "float32", "llvm"): 20000,
+    ("mobilenet_v2", 1, "float32", "llvm"): 15000,
+    ("bert", 1, "float32", "llvm"): 10000,
+    # GPU
+    ("resnet-50", 1, "float32", "cuda"): 20000,
+    ("mobilenet_v2", 1, "float32", "cuda"): 16000,
+    ("bert", 1, "float32", "cuda"): 12000,
+}
+
+
+def auto_scheduler_tune(network, batch_size, dtype, target, log_file):
     if os.path.exists(log_file):
         os.remove(log_file)
-    mod, net_params, input_shape, output_shape = get_network(network)
-    if network not in ["bert"]:
-        # convert to NHWC layout
-        desired_layouts = {'nn.conv2d': ['NHWC', 'default']}
-        seq = tvm.transform.Sequential([relay.transform.RemoveUnusedFunctions(),
-                                        relay.transform.ConvertLayout(desired_layouts)])
-        with tvm.transform.PassContext(opt_level=3):
-            mod = seq(mod)
+
+    layout = "NCHW"
+    mod, params, input_name, input_shape, output_shape = get_network(
+        network, batch_size, dtype, layout
+    )
+
+    n_trials = network_to_n_trials[(network, batch_size, dtype, str(target.kind))]
 
     if "cpu" in target.keys:
         tuning_opt = auto_scheduler.TuningOptions(
-            num_measure_trials=20000,  # change this to 20000 to achieve the best performance
+            num_measure_trials=n_trials,
             runner=auto_scheduler.LocalRunner(repeat=10, enable_cpu_cache_flush=True),
             measure_callbacks=[auto_scheduler.RecordToFile(log_file)],
         )
     else:
-        measure_ctx = auto_scheduler.LocalRPCMeasureContext(repeat=1, min_repeat_ms=300, timeout=10)
+        measure_ctx = auto_scheduler.LocalRPCMeasureContext(
+            repeat=1, min_repeat_ms=300, timeout=10
+        )
         tuning_opt = auto_scheduler.TuningOptions(
-            num_measure_trials=20000,  # change this to 20000 to achieve the best performance
+            num_measure_trials=n_trials,
             runner=measure_ctx.runner,
             measure_callbacks=[auto_scheduler.RecordToFile(log_file)],
         )
 
-    tasks, task_weights = auto_scheduler.extract_tasks(mod["main"], net_params, target)
+    tasks, task_weights = auto_scheduler.extract_tasks(mod["main"], params, target)
     tuner = auto_scheduler.TaskScheduler(tasks, task_weights)
     tuner.tune(tuning_opt)
 
@@ -41,42 +56,40 @@ if __name__ == "__main__":
     parser.add_argument(
         "--network",
         type=str,
-        choices=[
-            "resnet-50",
-            "mobilenet_v2",
-            "bert",
-            "all"
-        ],
-        help="The name of neural network",
+        choices=["resnet_50", "mobilenet_v2", "bert", "all"],
+        default="all",
+        help="The name of the neural network.",
     )
+    parser.add_argument("--batch-size", type=int, default=1, help="The batch size")
     parser.add_argument(
         "--target",
         type=str,
-        default="llvm -model=e5-2670 -mcpu=core-avx2",
-        help="The tvm compilation target",
+        default="llvm -model=platinum-8124m -mcpu=skylake-avx512",
+        help="The compilation target.",
     )
-    parser.add_argument("--logdir", type=str, default="tuning_logs/", help="Log file directory.")
-    parser.add_argument("--thread", type=int, default=1, help="The number of threads to be run.")
-    parser.add_argument("--inputname", type=str, default="data",
-                        help="Input name of the graph. For ONNX models, it is typically 0")
-
+    parser.add_argument("--dtype", type=str, default="float32", help="The data type.")
+    parser.add_argument(
+        "--logdir", type=str, default="tuning_logs/", help="Log file directory."
+    )
     args = parser.parse_args()
-    dtype = "float32"
 
-    if args.network is None or args.network == "all":
-        networks = ["resnet-50", "mobilenet_v2", "bert"]
+    if args.network == "all":
+        networks = ["resnet_50", "mobilenet_v2", "bert"]
     else:
         networks = [args.network]
-
-    if not os.path.exists(args.logdir):
-        os.mkdir(args.logdir)
+    batch_sizes = [args.batch_size]
+    dtypes = [args.dtype]
 
     target = tvm.target.Target(args.target)
 
-    if "cpu" in target.keys:
-        target_name = "cpu"
-    else:
-        target_name = "cuda"
     for network in networks:
-        log_file = os.path.join(args.logdir, "autoscheduler_" + target_name + "_" + network + ".log")
-        auto_scheduler_tune(network, target, args.inputname, log_file)
+        for batch_size in batch_sizes:
+            for dtype in dtypes:
+                network_key = make_network_key(network, batch_size, dtype)
+                print("Tune %s ..." % network_key)
+
+                log_file = os.path.join(
+                    args.logdir, "autoscheduler", target.model, network_key + ".json"
+                )
+
+                auto_scheduler_tune(network, batch_size, dtype, target, log_file)
