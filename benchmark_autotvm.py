@@ -114,3 +114,4 @@ if __name__ == "__main__":
                 benchmark(
                     network, batch_size, dtype, target, log_prefix, args.repeat
                 )
+
