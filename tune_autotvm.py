@@ -58,7 +58,7 @@ def get_tuning_option(target, log_file, dtype="float32"):
         tuning_option = {
             "log_filename": log_file,
             "tuner": "xgb",
-            "n_trial": 10,
+            "n_trial": 2000,
             "early_stopping": 600,
             "use_transfer_learning": True,
             "measure_option": autotvm.measure_option(
