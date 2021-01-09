@@ -4,9 +4,6 @@ import tvm
 from tvm import relay
 from tvm.relay.testing import resnet
 
-import mxnet
-import gluonnlp
-from mxnet.gluon.model_zoo.vision import get_model
 
 def get_network(name, batch_size=1, dtype="float32", layout="NCHW"):
     """Get the symbol definition and random weight of a network"""
@@ -15,16 +12,19 @@ def get_network(name, batch_size=1, dtype="float32", layout="NCHW"):
     output_shape = (batch_size, 1000)
 
     if "resnet" in name:
+        import mxnet
         n_layer = int(name.split("_")[1])
         block = mxnet.gluon.model_zoo.vision.get_resnet(1, n_layer, pretrained=True)
         mod, params = relay.frontend.from_mxnet(block, shape={"data": input_shape}, dtype=dtype)
         assert layout == "NCHW"
     elif name == "mobilenet_v2":
+        import mxnet
         multiplier = 1
         block = mxnet.gluon.model_zoo.vision.get_mobilenet_v2(multiplier, pretrained=True)
         mod, params = relay.frontend.from_mxnet(block, shape={"data": input_shape}, dtype=dtype)
         assert layout == "NCHW"
     elif name == "bert":
+        import gluonnlp
         seq_length = 128
 
         # Instantiate a BERT classifier using GluonNLP
