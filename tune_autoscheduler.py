@@ -70,7 +70,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--dtype", type=str, default="float32", help="The data type.")
     parser.add_argument(
-        "--logdir", type=str, default="tuning_logs/", help="Log file directory."
+        "--logdir", type=str, default="tmp_logs/", help="Log file directory."
     )
     args = parser.parse_args()
 

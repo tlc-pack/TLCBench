@@ -17,6 +17,7 @@ def benchmark(network, batch_size, dtype, target, log_file, repeat):
     )
 
     assert os.path.exists(log_file), "The log file '%s' does not exist." % log_file
+    print("Use log file %s" % log_file)
 
     if network in ["bert"]:
         # Build module
@@ -76,7 +77,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--dtype", type=str, default="float32", help="The data type.")
     parser.add_argument(
-        "--logdir", type=str, default="tuning_logs/", help="Log file directory."
+        "--logdir", type=str, default="tmp_logs/", help="Log file directory."
     )
     parser.add_argument("--repeat", type=int, default=100)
     args = parser.parse_args()

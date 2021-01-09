@@ -13,9 +13,9 @@ The following commands read pre-tuned logs from directory `tuning_logs` and benc
 
 - commands
 ```bash
-python3 benchmark_autotvm.py --network all --target "llvm -mcpu=skylake-avx512 -model=platinum-8124m"
+python3 benchmark_autotvm.py --network all --target "llvm -mcpu=skylake-avx512 -model=platinum-8124m" --logdir saved_logs/latest
 
-python3 benchmark_autoscheduler.py --network all --target "llvm -mcpu=skylake-avx512 -model=platinum-8124m"
+python3 benchmark_autoscheduler.py --network all --target "llvm -mcpu=skylake-avx512 -model=platinum-8124m" --logdir saved_logs/latest
 ```
 
 - results
@@ -28,16 +28,17 @@ The following commands read pre-tuned logs from directory `tuning_logs` and benc
 
 - commands
 ```bash
-python3 benchmark_autotvm.py --network resnet_50 --target "llvm -mcpu=skylake-avx512 -model=platinum-8124m"
+python3 benchmark_autotvm.py --network resnet_50 --target "llvm -mcpu=skylake-avx512 -model=platinum-8124m" --logdir saved_logs/latest
 
-python3 benchmark_autoscheduler.py --network resnet_50 --target "llvm -mcpu=skylake-avx512 -model=platinum-8124m" 
+python3 benchmark_autoscheduler.py --network resnet_50 --target "llvm -mcpu=skylake-avx512 -model=platinum-8124m"  --logdir saved_logs/latest
 ```
 
 You can replace "resnet_50" above with "mobilenet_v2" or "bert".
 
 
 ### Tuning
-The following commands perform auto-tuning for one or all networks and save tuning logs to directory `tuning_logs`.
+The following commands perform auto-tuning for one or all networks and save tuning logs to directory `tmp_logs`.
+After tuning, you can use the benchmark commands above to run benchmark with these logs by replcing the last argument with `--logdir tmp_logs`
 
 - commands for autotvm
 ```bash
@@ -61,9 +62,9 @@ The following commands read pre-tuned logs from directory `tuning_logs` and benc
 
 - commands
 ```bash
-python3 benchmark_autotvm.py --network all --target "cuda -model=t4"
+python3 benchmark_autotvm.py --network all --target "cuda -model=t4" --logdir saved_logs/latest
 
-python3 benchmark_autoscheduler.py --network all --target "cuda -model=t4"
+python3 benchmark_autoscheduler.py --network all --target "cuda -model=t4" --logdir saved_logs/latest
 ```
 
 - results
@@ -76,16 +77,17 @@ The following commands read pre-tuned logs from directory `tuning_logs` and benc
 
 - commands
 ```bash
-python3 benchmark_autotvm.py --network resnet_50 --target "cuda -model=t4"
+python3 benchmark_autotvm.py --network resnet_50 --target "cuda -model=t4" --logdir saved_logs/latest
 
-python3 benchmark_autoscheduler.py --network resnet_50 --target "cuda -model=t4"
+python3 benchmark_autoscheduler.py --network resnet_50 --target "cuda -model=t4" --logdir saved_logs/latest
 ```
 
 You can replace "resnet_50" above with "mobilenet_v2" or "bert".
 
 
 ### Tuning
-The following commands perform auto-tuning for one or all networks and save tuning logs to directory `tuning_logss`.
+The following commands perform auto-tuning for one or all networks and save tuning logs to directory `tmp_logs`.
+After tuning, you can use the benchmark commands above to run benchmark with these logs by replcing the last argument with `--logdir tmp_logs`
 
 - commands for autotvm
 ```bash
