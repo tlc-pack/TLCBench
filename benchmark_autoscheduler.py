@@ -12,44 +12,58 @@ from utils import get_network, make_network_key
 
 def benchmark(network, batch_size, dtype, target, log_file, repeat):
     layout = "NHWC"
-    mod, params, input_shape, output_shape = get_network(network, batch_size, dtype, target)
+    mod, params, input_name, input_shape, output_shape = get_network(
+        network, batch_size, dtype, layout
+    )
 
-    if network == "bert":
+    assert os.path.exists(log_file), "The log file '%s' does not exist." % log_file
+
+    if network in ["bert"]:
+        # Build module
         with auto_scheduler.ApplyHistoryBest(log_file):
-            with tvm.transform.PassContext(opt_level=3, config={"relay.backend.use_auto_scheduler": True}):
+            with tvm.transform.PassContext(
+                opt_level=3, config={"relay.backend.use_auto_scheduler": True}
+            ):
                 lib = relay.build(mod, target=target, params=params)
 
-        # upload parameters to device
         ctx = tvm.context(str(target), 0)
-        data_tvm = tvm.nd.array((np.random.uniform(size=input_shape[0])).astype(dtype))
-        token_types_tvm = tvm.nd.array(np.random.uniform(size=input_shape[1]).astype(dtype))
-        valid_length_tvm = tvm.nd.array(np.random.uniform(size=input_shape[2]).astype(dtype))
         module = runtime.GraphModule(lib["default"](ctx))
+
+        # Feed input data
+        seq_length = input_shape[0][1]
+        data_tvm = tvm.nd.array((np.random.uniform(size=input_shape[0])).astype(dtype))
+        token_types_tvm = tvm.nd.array(
+            np.random.uniform(size=input_shape[1]).astype(dtype)
+        )
+        valid_length_tvm = tvm.nd.array(
+            np.array([seq_length] * batch_size).astype(dtype)
+        )
         module.set_input(data0=data_tvm, data1=token_types_tvm, data2=valid_length_tvm)
     else:
-        # convert to NHWC layout
-        desired_layouts = {'nn.conv2d': ['NHWC', 'default']}
-        seq = tvm.transform.Sequential([relay.transform.RemoveUnusedFunctions(),
-                                        relay.transform.ConvertLayout(desired_layouts)])
-        with tvm.transform.PassContext(opt_level=3):
-            mod = seq(mod)
-
+        # Build module
         with auto_scheduler.ApplyHistoryBest(log_file):
-            with tvm.transform.PassContext(opt_level=3, config={"relay.backend.use_auto_scheduler": True}):
+            with tvm.transform.PassContext(
+                opt_level=3, config={"relay.backend.use_auto_scheduler": True}
+            ):
                 lib = relay.build(mod, target=target, params=params)
-
-        # upload parameters to device
         ctx = tvm.context(str(target), 0)
-        data_tvm = tvm.nd.array((np.random.uniform(size=input_shape)).astype(dtype))
         module = runtime.GraphModule(lib["default"](ctx))
-        module.set_input(args.inputname, data_tvm)
 
-    # evaluate
-    print("Evaluate...")
-    ftimer = module.module.time_evaluator("run", ctx, number=1, repeat=args.repeat)
-    prof_res = np.array(ftimer().results) * 1000  # multiply 1000 for converting to millisecond
+        # Feed input data
+        data_tvm = tvm.nd.array((np.random.uniform(size=input_shape)).astype(dtype))
+        module.set_input(input_name, data_tvm)
+
+    # Evaluate
+    ftimer = module.module.time_evaluator("run", ctx, number=1, repeat=repeat)
+    prof_res = np.array(ftimer().results) * 1000  # convert to millisecond
     print(
-        "%-20s %-19s (%s)" % (network, "%.2f ms" % np.mean(prof_res), "%.2f ms" % np.std(prof_res))
+        "%-18s %-12s %-19s (%s)"
+        % (
+            network,
+            batch_size,
+            "%.2f ms" % np.mean(prof_res),
+            "%.2f ms" % np.std(prof_res),
+        )
     )
 
 
@@ -100,4 +114,3 @@ if __name__ == "__main__":
                     args.logdir, "autoscheduler", target.model, network_key + ".json"
                 )
                 benchmark(network, batch_size, dtype, target, log_file, args.repeat)
-

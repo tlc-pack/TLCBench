@@ -17,9 +17,13 @@ def benchmark(network, batch_size, dtype, target, log_prefix, repeat):
     )
 
     if use_graph_tuner(network, batch_size, dtype, target):
-        history_best_context = autotvm.apply_graph_best(log_prefix + ".graph.log")
+        log_file = log_prefix + ".graph.log"
+        history_best_context = autotvm.apply_graph_best(log_file)
     else:
-        history_best_context = autotvm.apply_history_best(log_prefix + ".kernel.log")
+        log_file = log_prefix + ".kernel.log"
+        history_best_context = autotvm.apply_history_best(log_file)
+
+    assert os.path.exists(log_file), "The log file '%s' does not exist." % log_file
 
     if network in ["bert"]:
         # Build module
@@ -111,7 +115,4 @@ if __name__ == "__main__":
                 log_prefix = os.path.join(
                     args.logdir, "autotvm", target.model, network_key
                 )
-                benchmark(
-                    network, batch_size, dtype, target, log_prefix, args.repeat
-                )
-
+                benchmark(network, batch_size, dtype, target, log_prefix, args.repeat)
