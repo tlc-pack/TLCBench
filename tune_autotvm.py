@@ -43,7 +43,7 @@ def get_tuning_option(target, log_file, dtype="float32"):
         tuning_option = {
             "log_filename": log_file,
             "tuner": "random",
-            "n_trial": 1200,
+            "n_trial": 1300,
             "early_stopping": None,
             "use_transfer_learning": False,
             "measure_option": autotvm.measure_option(
