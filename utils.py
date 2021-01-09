@@ -65,5 +65,8 @@ def make_network_key(network_name, batch_size, dtype):
     return "%s-B%s-%s" % (network_name, batch_size, dtype)
 
 
-if __name__ == "__main__":
-    print(get_network("resnet-50"))
+def use_graph_tuner(network_name, batch_size, dtype, target):
+    """Return whether use graph tuner for a network on a target"""
+    # Only use graph tuner for CNNs on CPUs
+    return "cpu" in target.keys and not (network in ["bert"])
+

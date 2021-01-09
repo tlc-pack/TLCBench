@@ -61,9 +61,9 @@ The following commands read pre-tuned logs from directory `tuning_logs` and benc
 
 - commands
 ```bash
-python3 benchmark_autotvm.py --network all --target "cuda -model=v100"
+python3 benchmark_autotvm.py --network all --target "cuda -model=t4"
 
-python3 benchmark_autoscheduler.py --network all --target "cuda -model=v100"
+python3 benchmark_autoscheduler.py --network all --target "cuda -model=t4"
 ```
 
 - results
@@ -76,9 +76,9 @@ The following commands read pre-tuned logs from directory `tuning_logs` and benc
 
 - commands
 ```bash
-python3 benchmark_autotvm.py --network resnet_50 --target "cuda -model=v100"
+python3 benchmark_autotvm.py --network resnet_50 --target "cuda -model=t4"
 
-python3 benchmark_autoscheduler.py --network resnet_50 --target "cuda -model=v100"
+python3 benchmark_autoscheduler.py --network resnet_50 --target "cuda -model=t4"
 ```
 
 You can replace "resnet_50" above with "mobilenet_v2" or "bert".
@@ -90,16 +90,16 @@ The following commands perform auto-tuning for one or all networks and save tuni
 - commands for autotvm
 ```bash
 # Tune one network
-python3 tune_autotvm.py --network resnet_50 --target "cuda -model=v100"
+python3 tune_autotvm.py --network resnet_50 --target "cuda -model=t4"
 # Tune all networks
-python3 tune_autotvm.py --network all --target "cuda -model=v100"
+python3 tune_autotvm.py --network all --target "cuda -model=t4"
 ````
 
 - commands for auto-scheduler
 ```bash
 # Tune one network
-python3 tune_autoscheduler.py --network resnet_50 --target "cuda -model=v100"
+python3 tune_autoscheduler.py --network resnet_50 --target "cuda -model=t4"
 # Tune all networks
-python3 tune_autoscheduler.py --network all --target "cuda -model=v100"
+python3 tune_autoscheduler.py --network all --target "cuda -model=t4"
 ```
 

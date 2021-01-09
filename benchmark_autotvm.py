@@ -7,7 +7,7 @@ import tvm
 from tvm import relay, autotvm
 import tvm.contrib.graph_runtime as runtime
 
-from utils import get_network, make_network_key
+from utils import get_network, make_network_key, use_graph_tuner
 
 
 def benchmark(network, batch_size, dtype, target, log_prefix, repeat):
@@ -16,14 +16,14 @@ def benchmark(network, batch_size, dtype, target, log_prefix, repeat):
         network, batch_size, dtype, layout
     )
 
-    if "cpu" in target.keys:
-        log_file = log_prefix + ".graph.log"
+    if use_graph_tuner(network, batch_size, dtype, target):
+        history_best_context = autotvm.apply_graph_best(log_prefix + ".graph.log")
     else:
-        log_file = log_prefix + ".kernel.log"
+        history_best_context = autotvm.apply_history_best(log_prefix + ".kernel.log")
 
     if network in ["bert"]:
         # Build module
-        with autotvm.apply_history_best(log_file):
+        with history_best_context:
             with tvm.transform.PassContext(opt_level=3):
                 lib = relay.build(mod, target=target, params=params)
         ctx = tvm.context(str(target), 0)
@@ -41,7 +41,7 @@ def benchmark(network, batch_size, dtype, target, log_prefix, repeat):
         module.set_input(data0=data_tvm, data1=token_types_tvm, data2=valid_length_tvm)
     else:
         # Build module
-        with autotvm.apply_graph_best(log_file):
+        with history_best_context:
             with tvm.transform.PassContext(opt_level=3):
                 lib = relay.build(mod, target=target, params=params)
         ctx = tvm.context(str(target), 0)
