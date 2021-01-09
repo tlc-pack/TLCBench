@@ -6,7 +6,7 @@ from tvm import relay, autotvm
 from tvm.autotvm.tuner import XGBTuner, GATuner, RandomTuner, GridSearchTuner
 from tvm.autotvm.graph_tuner import DPTuner, PBQPTuner
 
-from utils import get_network, make_network_key
+from utils import get_network, make_network_key, use_graph_tuner
 
 
 def autotvm_tune(network, batch_size, dtype, target, log_prefix):
@@ -34,7 +34,7 @@ def autotvm_tune(network, batch_size, dtype, target, log_prefix):
     )
     tune_kernels(tasks, **tuning_opt)
 
-    if "cpu" in target.keys and not (network in ["bert"]):
+    if use_graph_tuner(network, batch_size, dtype, target):
         tune_graph(mod["main"], input_name, input_shape, target, kernel_log, graph_log)
 
 
@@ -58,7 +58,7 @@ def get_tuning_option(target, log_file, dtype="float32"):
         tuning_option = {
             "log_filename": log_file,
             "tuner": "xgb",
-            "n_trial": 2000,
+            "n_trial": 10,
             "early_stopping": 600,
             "use_transfer_learning": True,
             "measure_option": autotvm.measure_option(
