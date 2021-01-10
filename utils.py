@@ -2,7 +2,6 @@ import os
 
 import tvm
 from tvm import relay
-from tvm.relay.testing import resnet
 
 
 def get_network(name, batch_size, dtype, layout):
