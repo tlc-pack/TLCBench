@@ -83,8 +83,26 @@ python3 tune_autoscheduler.py --network all --target "llvm -mcpu=skylake-avx512 
 ## Nvidia GPU
 
 ### Results on AWS g4dn.4xlarge (NVIDIA T4)
+- AutoTVM
+```bash
+-------------------------------------------------------------
+Network Name       Batch size   Mean Inference Time (std dev)
+-------------------------------------------------------------
+resnet_50          1            3.54 ms             (0.02 ms)
+mobilenet_v2       1            0.74 ms             (0.00 ms)
+bert               1            89.06 ms            (1.22 ms)
+-------------------------------------------------------------
 ```
 
+- AutoScheduler
+```bash
+-------------------------------------------------------------
+Network Name       Batch size   Mean Inference Time (std dev)
+-------------------------------------------------------------
+resnet_50          1            2.96 ms             (0.00 ms)
+mobilenet_v2       1            0.57 ms             (0.00 ms)
+bert               1            10.80 ms            (0.07 ms)
+-------------------------------------------------------------
 ```
 
 
