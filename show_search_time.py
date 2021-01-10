@@ -40,14 +40,14 @@ if __name__ == "__main__":
     filenames = glob.glob(os.path.join(args.logdir, "autotvm", "*", "*.kernel.log"))
     filenames.sort()
     for filename in filenames:
-        print("%-15d | %s" % (get_search_time_autotvm(filename), filename[len(args.logdir)+1:]))
+        print("%-15d | %s" % (get_search_time_autotvm(filename), filename[len(args.logdir):]))
 
     print("")
 
     filenames = glob.glob(os.path.join(args.logdir, "autoscheduler", "*", "*.json"))
     filenames.sort()
     for filename in filenames:
-        print("%-15d | %s" % (get_search_time_autoscheduler(filename), filename[len(args.logdir)+1:]))
+        print("%-15d | %s" % (get_search_time_autoscheduler(filename), filename[len(args.logdir):]))
 
     print("-" * 70)
 
