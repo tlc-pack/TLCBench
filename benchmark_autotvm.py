@@ -36,14 +36,10 @@ def benchmark(network, batch_size, dtype, target, log_prefix, repeat):
 
         # Feed input data
         seq_length = input_shape[0][1]
-        data_tvm = tvm.nd.array((np.random.uniform(size=input_shape[0])).astype(dtype))
-        token_types_tvm = tvm.nd.array(
-            np.random.uniform(size=input_shape[1]).astype(dtype)
-        )
-        valid_length_tvm = tvm.nd.array(
-            np.array([seq_length] * batch_size).astype(dtype)
-        )
-        module.set_input(data0=data_tvm, data1=token_types_tvm, data2=valid_length_tvm)
+        data = np.random.uniform(size=input_shape[0])
+        token_types = np.random.uniform(size=input_shape[1])
+        valid_length = np.array([seq_length] * batch_size)
+        module.set_input(data0=data, data1=token_types, data2=valid_length)
     else:
         # Build module
         with history_best_context:
@@ -53,11 +49,11 @@ def benchmark(network, batch_size, dtype, target, log_prefix, repeat):
         module = runtime.GraphModule(lib["default"](ctx))
 
         # Feed input data
-        data_tvm = tvm.nd.array((np.random.uniform(size=input_shape)).astype(dtype))
-        module.set_input(input_name, data_tvm)
+        data = np.random.uniform(size=input_shape)
+        module.set_input(input_name, data)
 
     # Evaluate
-    ftimer = module.module.time_evaluator("run", ctx, number=1, repeat=repeat)
+    ftimer = module.module.time_evaluator("run", ctx, min_repeat_ms=500, repeat=repeat)
     return np.array(ftimer().results)
 
 
@@ -81,7 +77,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--logdir", type=str, default="tmp_logs/", help="Log file directory."
     )
-    parser.add_argument("--repeat", type=int, default=100)
+    parser.add_argument("--repeat", type=int, default=3)
     args = parser.parse_args()
 
     if args.network == "all":
