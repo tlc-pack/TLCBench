@@ -13,9 +13,9 @@ network_to_n_trials = {
     ("mobilenet_v2", 1, "float32", "llvm"): 16000,
     ("bert", 1, "float32", "llvm"): 12000,
     # GPU
-    ("resnet_50", 1, "float32", "cuda"): 22000,
+    ("resnet_50", 1, "float32", "cuda"): 20000,
     ("mobilenet_v2", 1, "float32", "cuda"): 16000,
-    ("bert", 1, "float32", "cuda"): 12000,
+    ("bert", 1, "float32", "cuda"): 10000,
 }
 
 
