@@ -22,7 +22,7 @@ def autotvm_tune(network, batch_size, dtype, target, log_prefix):
     mod, params, input_name, input_shape, output_shape = get_network(
         network, batch_size, dtype, layout
     )
-    tuning_opt = get_tuning_option(target, kernel_log)
+    tuning_opt = get_tuning_option(network, batch_size, dtype, target, kernel_log)
     ops = [
         relay.op.get("nn.batch_matmul"),
         relay.op.get("nn.dense"),
@@ -38,22 +38,32 @@ def autotvm_tune(network, batch_size, dtype, target, log_prefix):
         tune_graph(mod["main"], input_name, input_shape, target, kernel_log, graph_log)
 
 
-def get_tuning_option(target, log_file, dtype="float32"):
+def get_tuning_option(network, batch_size, dtype, target, log_file):
     if "cpu" in target.keys:
-        tuning_option = {
-            "log_filename": log_file,
-            "tuner": "random",
-            "n_trial": 1300,
-            "early_stopping": None,
-            "use_transfer_learning": False,
-            "measure_option": autotvm.measure_option(
-                builder=autotvm.LocalBuilder(timeout=10),
-                # runner=autotvm.LocalRunner(number=10, repeat=1, min_repeat_ms=1000),
-                runner=autotvm.LocalRunner(
-                    number=1, repeat=10, enable_cpu_cache_flush=True
+        if use_graph_tuner(network, batch_size, dtype, target):
+            tuning_option = {
+                "log_filename": log_file,
+                "tuner": "random",
+                "n_trial": 1300,
+                "early_stopping": None,
+                "use_transfer_learning": False,
+                "measure_option": autotvm.measure_option(
+                    builder=autotvm.LocalBuilder(timeout=10),
+                    runner=autotvm.LocalRunner(number=10, repeat=1, min_repeat_ms=1000),
                 ),
-            ),
-        }
+            }
+        else:
+            tuning_option = {
+                "log_filename": log_file,
+                "tuner": "xgb",
+                "n_trial": 1500,
+                "early_stopping": 600,
+                "use_transfer_learning": True,
+                "measure_option": autotvm.measure_option(
+                    builder=autotvm.LocalBuilder(timeout=10),
+                    runner=autotvm.LocalRunner(number=10, repeat=1, min_repeat_ms=1000),
+                ),
+            }
     else:
         tuning_option = {
             "log_filename": log_file,

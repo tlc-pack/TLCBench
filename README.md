@@ -15,8 +15,8 @@ Benchmark scripts for TVM
 -------------------------------------------------------------
 Network Name       Batch size   Mean Inference Time (std dev)
 -------------------------------------------------------------
-resnet_50          1            5.46 ms             (0.08 ms)
-mobilenet_v2       1            1.38 ms             (0.05 ms)
+resnet_50          1            5.40 ms             (0.08 ms)
+mobilenet_v2       1            1.33 ms             (0.05 ms)
 bert               1            38.65 ms            (0.00 ms)
 -------------------------------------------------------------
 ```
@@ -28,7 +28,7 @@ Network Name       Batch size   Mean Inference Time (std dev)
 -------------------------------------------------------------
 resnet_50          1            5.30 ms             (0.05 ms)
 mobilenet_v2       1            0.91 ms             (0.02 ms)
-bert               1            16.32 ms            (0.16 ms)
+bert               1            16.52 ms            (0.16 ms)
 -------------------------------------------------------------
 ```
 
