@@ -9,19 +9,19 @@ import os
 
 
 def get_search_time_autotvm(filename):
-    with open(filename, 'r') as f:
+    with open(filename, "r") as f:
         lines = f.readlines()
-        t1 = json.loads(lines[0])['result'][-1]
-        t2 = json.loads(lines[-1])['result'][-1]
+        t1 = json.loads(lines[0])["result"][-1]
+        t2 = json.loads(lines[-1])["result"][-1]
 
     return t2 - t1, len(lines)
 
 
 def get_search_time_autoscheduler(filename):
-    with open(filename, 'r') as f:
+    with open(filename, "r") as f:
         lines = f.readlines()
-        t1 = json.loads(lines[0])['r'][-1]
-        t2 = json.loads(lines[-1])['r'][-1]
+        t1 = json.loads(lines[0])["r"][-1]
+        t2 = json.loads(lines[-1])["r"][-1]
 
     return t2 - t1, len(lines)
 
@@ -41,7 +41,7 @@ if __name__ == "__main__":
     filenames.sort()
     for filename in filenames:
         time, lines = get_search_time_autotvm(filename)
-        print("%8d | %6d | %s" % (time, lines, filename[len(args.logdir):]))
+        print("%8d | %6d | %s" % (time, lines, filename[len(args.logdir) :]))
 
     print("")
 
@@ -49,7 +49,6 @@ if __name__ == "__main__":
     filenames.sort()
     for filename in filenames:
         time, lines = get_search_time_autoscheduler(filename)
-        print("%8d | %6d | %s" % (time, lines, filename[len(args.logdir):]))
+        print("%8d | %6d | %s" % (time, lines, filename[len(args.logdir) :]))
 
     print("-" * 70)
-

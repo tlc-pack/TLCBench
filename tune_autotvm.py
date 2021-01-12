@@ -93,21 +93,22 @@ def tune_kernels(
 ):
     for i, tsk in enumerate(reversed(tasks)):
         prefix = "[Task %2d/%2d] " % (i + 1, len(tasks))
+
         # create tuner
-        if tuner == "xgb" or tuner == "xgb-rank":
+        if tuner == "random" or n_trial >= len(tsk.config_space):
+            tuner_obj = RandomTuner(tsk)
+        elif tuner == "xgb" or tuner == "xgb-rank":
             tuner_obj = XGBTuner(tsk, loss_type="rank")
+            # use history data to pre-train the cost model
+            if use_transfer_learning:
+                if os.path.isfile(log_filename):
+                    tuner_obj.load_history(autotvm.record.load_from_file(log_filename))
         elif tuner == "ga":
             tuner_obj = GATuner(tsk, pop_size=100)
-        elif tuner == "random":
-            tuner_obj = RandomTuner(tsk)
         elif tuner == "gridsearch":
             tuner_obj = GridSearchTuner(tsk)
         else:
             raise ValueError("Invalid tuner: " + tuner)
-
-        if use_transfer_learning:
-            if os.path.isfile(log_filename):
-                tuner_obj.load_history(autotvm.record.load_from_file(log_filename))
 
         # do tuning
         tsk_trial = min(n_trial, len(tsk.config_space))
