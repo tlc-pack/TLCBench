@@ -1,0 +1,5 @@
+__pycache__
+.DS_Store
+*.swp
+today_job.sh
+total_latency.tsv
