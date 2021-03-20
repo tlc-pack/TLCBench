@@ -5,7 +5,6 @@ import tvm
 from tvm import relay, auto_scheduler
 
 from utils import get_network, make_network_key
-from update import update_file
 
 network_to_n_trials = {
     # CPU
@@ -21,8 +20,8 @@ network_to_n_trials = {
 
 def auto_scheduler_tune(network, batch_size, dtype, target, log_file):
     os.makedirs(os.path.dirname(log_file), exist_ok=True)
-    #if os.path.exists(log_file):
-    #    os.remove(log_file)
+    if os.path.exists(log_file):
+        os.remove(log_file)
 
     layout = "NHWC"
     mod, params, input_name, input_shape, output_shape = get_network(
@@ -49,9 +48,6 @@ def auto_scheduler_tune(network, batch_size, dtype, target, log_file):
         )
 
     tasks, task_weights = auto_scheduler.extract_tasks(mod["main"], params, target)
-    print(log_file)
-    update_file(log_file, tasks)
-    return
     for idx, task in enumerate(tasks):
         print(
             "========== Task %d  (workload key: %s) =========="
