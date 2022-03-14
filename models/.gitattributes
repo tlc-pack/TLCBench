@@ -1,3 +1,4 @@
 bert-base-qat.onnx filter=lfs diff=lfs merge=lfs -text
 efficientnetv2.onnx filter=lfs diff=lfs merge=lfs -text
 efficientnetv2-s.onnx filter=lfs diff=lfs merge=lfs -text
+efficientnetv2-m.onnx filter=lfs diff=lfs merge=lfs -text
