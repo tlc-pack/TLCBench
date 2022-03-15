@@ -1,0 +1,4 @@
+This directory stores good models for benchmarking.
+
+- [Int8 BERT quantized with Quantization-Aware training](bert-base-qat.onnx) following the steps in https://github.com/NVIDIA/FasterTransformer/tree/main/bert-quantization/bert-pyt-quantization#quantization-aware-fine-tuning and converted to ONNX manually using [this function](https://gist.github.com/masahi/19ff1e59a7558a21c80de9e6707108eb#file-qat_bert_export-py-L741). The model and `run_squad.py` script that the export code is based on are both licensed under Apache-2.0.
+- [EfficientNetv2-M](efficientnetv2-m.onnx), the original TF2 model is from https://github.com/google/automl/tree/master/efficientnetv2 and converted to ONNX following the steps in https://github.com/NVIDIA/TensorRT/tree/master/samples/python/efficientnet#2-efficientnet-v2. Both the original model and the ONNX export code are licensed under Apache-2.0.
